@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/.nyc_output
 
 # next.js
 /.next/
@@ -19,10 +20,28 @@
 
 # production
 /build
+/dist
+/.turbo
 
 # misc
 .DS_Store
 *.pem
+secrets.h
+**/secrets.h
+.pio
+.vscode/.browse.c_cpp.db*
+.idea/
+*.swp
+*.swo
+
+# Arduino / ESP32 generated output
+**/build/
+*.elf
+*.hex
+*.bin
+*.o
+*.a
+*.map
 
 # debug
 npm-debug.log*
@@ -32,6 +51,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel

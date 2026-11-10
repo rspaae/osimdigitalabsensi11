@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Legacy Node.js CJS utility scripts — tidak dijalankan oleh Next.js build
+    "scripts/*.js",
   ]),
 ]);
 

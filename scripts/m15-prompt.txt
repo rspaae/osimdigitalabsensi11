@@ -1,0 +1,214 @@
+<USER_REQUEST>
+# MILESTONE 15 — AUTOMATIC ATTENDANCE & DUTY MANAGEMENT
+
+Lanjutkan pengembangan proyek OSIS MPK Attendance System berdasarkan kondisi kode, database, dokumentasi, dan hasil Milestone 14 yang sudah ada.
+
+Bertindak sebagai senior full-stack developer. Kerjakan implementasi secara menyeluruh dan terintegrasi. Jangan mengulang pekerjaan yang sudah selesai. Jangan berhenti untuk meminta persetujuan pada setiap tugas kecil. Lanjutkan seluruh pekerjaan yang aman dalam milestone ini, lalu berikan satu laporan akhir yang lengkap.
+
+## 1. AUTOMATIC ATTENDANCE — TANPA OPEN/CLOSE SESSION MANUAL
+
+Ubah mekanisme absensi agar tidak lagi bergantung pada pengurus yang harus membuka atau menutup sesi secara manual.
+
+Ketentuan:
+- Device selalu siap menerima scan RFID.
+- Setiap scan dikirim ke backend.
+- Backend menentukan jadwal yang sedang berlaku berdasarkan waktu server `Asia/Jakarta`.
+- Jika ditemukan tepat satu jadwal yang sesuai, proses absensi secara otomatis.
+- Jika tidak ada jadwal yang sesuai, tolak scan tanpa membuat catatan absensi.
+- Jika terdapat lebih dari satu jadwal yang cocok, tolak scan dengan error yang jelas. Jangan memilih jadwal secara acak atau berdasarkan jadwal terdekat.
+- Jadwal tetap dapat dibuat dan dikelola melalui dashboard.
+- Jangan lagi mewajibkan status manual OPEN/CLOSED untuk menentukan apakah scan dapat diterima.
+- Pertahankan fitur koreksi absensi dan rekonsiliasi ALPA yang sudah ada.
+
+## 2. SISTEM JADWAL BERULANG DUA MINGGU
+
+Buat sistem siklus jadwal berulang setiap 14 hari.
+
+Ketentuan:
+- Minggu 1 berlangsung selama 7 hari.
+- Minggu 2 berlangsung selama 7 hari berikutnya.
+- Setelah Minggu 2 selesai, siklus kembali ke Minggu 1.
+- Siklus harus berjalan terus melewati pergantian bulan dan tahun.
+- Setiap jadwal dapat dikonfigurasi berdasarkan Week 1 atau Week 2 dan hari dalam minggu.
+- Sistem harus memiliki pengaturan `cycleStartDate` sebagai tanggal acuan dimulainya Minggu 1.
+- `cycleStartDate` dapat diatur oleh SUPERADMIN melalui dashboard.
+- Jangan mengarang atau menetapkan tanggal awal siklus sendiri.
+- Jika tanggal awal belum dikonfigurasi, tampilkan status konfigurasi belum lengkap dan jangan mengaktifkan perhitungan siklus secara diam-diam.
+- Perubahan tanggal awal siklus harus memiliki validasi dan audit log.
+
+Gunakan perhitungan tanggal yang konsisten dengan zona waktu `Asia/Jakarta`.
+
+## 3. BATAS WAKTU ABSENSI
+
+Gunakan aturan berikut:
+
+| Kegiatan | Batas maksimal |
+|---|---|
+| Sapa Pagi | 06.00 WIB |
+| Danusan | 06.10 WIB |
+
+Aturan penting:
+- Tidak ada kategori TERLAMBAT untuk kedua kegiatan ini.
+- Scan sebelum batas waktu menghasilkan status `HADIR`.
+- Scan tepat pada batas waktu juga menghasilkan status `HADIR`.
+- Scan setelah batas waktu harus ditolak.
+- Scan yang ditolak tidak boleh membuat catatan absensi.
+- Batas waktu merupakan waktu maksimal absensi, bukan otomatis waktu mulai kegiatan.
+- Jangan membuat aturan ambang keterlambatan tambahan.
+- Waktu harus selalu ditentukan oleh backend, bukan timestamp dari ESP32.
+- Jadikan batas waktu sebagai konfigurasi jadwal yang memiliki nilai default sesuai ketentuan di atas.
+
+## 4. JADWAL SAPA PAGI
+
+Implementasikan roster Sapa Pagi Minggu 1 dan Minggu 2 berdasarkan daftar anggota yang telah diberikan oleh Project Owner.
+
+Ketentuan:
+- Cocokkan nama dengan data Member yang sudah ada di database.
+- Jangan membuat data anggota baru hanya karena nama tidak ditemukan.
+- Jika nama tidak cocok, masukkan ke laporan sebagai data yang perlu ditinjau.
+- Pertahankan klasifikasi PENGURUS OSIS dan PENGURUS MPK.
+- Pastikan setiap anggota terhubung dengan hari dan minggu yang tepat.
+- Jangan mengubah nama anggota secara otomatis tanpa verifikasi.
+
+Roster Danusan belum diberikan. Buat arsitektur pengelolaan roster Danusan yang fleksibel melalui dashboard, tetapi jangan mengarang atau mengisi nama anggota.
+
+## 5. ABSENSI DI LUAR JADWAL
+
+Jika anggota terdaftar melakukan scan RFID pada waktu kegiatan yang valid tetapi tidak tercantum dalam roster hari tersebut:
+
+- Absensi tetap dicatat.
+- Status dicatat sebagai `DI LUAR JADWAL`.
+- Identitas anggota dan waktu scan harus tetap tersimpan.
+- Roster asli tidak boleh berubah.
+- Data harus tampil pada riwayat dan laporan.
+- Status ini harus dibedakan dari `HADIR`, `IZIN`, `SAKIT`, dan `ALPA`.
+
+Jika anggota hadir sebagai pengganti yang telah disetujui:
+- Catat absensi menggunakan identitas anggota pengganti.
+- Hubungkan absensi dengan data penggantian jadwal.
+- Jangan tandai sebagai `DI LUAR JADWAL`.
+
+## 6. PENGGANTIAN DAN PERTUKARAN JADWAL
+
+Buat fitur penggantian atau pertukaran anggota jadwal.
+
+Hak akses:
+- Sekbid 2: mengelola penggantian jadwal Sapa Pagi.
+- Sekbid 6: mengelola penggantian jadwal Danusan.
+- SUPERADMIN: memiliki akses penuh.
+- Role lainnya mengikuti aturan RBAC yang sudah berlaku.
+
+Setiap penggantian harus menyimpan:
+- Anggota yang awalnya bertugas.
+- Anggota pengganti.
+- Kegiatan.
+- Minggu siklus.
+- Hari dan tanggal.
+- Alasan penggantian.
+- Pengurus yang melakukan perubahan.
+- Waktu perubahan.
+- Riwayat perubahan dan audit log.
+
+Validasi:
+- Cegah penggantian aktif yang duplikat.
+- Cegah anggota memiliki jadwal yang bertabrakan.
+- Pertahankan data penugasan asli.
+- Sediakan mekanisme pembatalan atau koreksi dengan audit log.
+- Penggantian yang sudah disetujui harus digunakan oleh sistem automatic attendance.
+
+## 7. ROLE-BASED ACCESS CONTROL
+
+Pastikan seluruh aturan hak akses diterapkan di backend, bukan hanya menyembunyikan tombol di frontend.
+
+- Sekbid 2 hanya boleh mengelola jadwal dan penggantian Sapa Pagi.
+- Sekbid 6 hanya boleh mengelola jadwal dan penggantian Danusan.
+- SUPERADMIN memiliki akses penuh.
+- Role lain tidak boleh mengakses operasi yang tidak diizinkan.
+- Pertahankan validasi role dan scope dari implementasi sebelumnya.
+
+## 8. INTEGRASI ESP32 DAN LCD
+
+Sesuaikan API scan RFID dan firmware agar mendukung automatic attendance.
+
+Ketentuan:
+- ESP32 hanya mengirim `device_code` dan `rfid_uid`.
+- UID menggunakan format canonical uppercase hexadecimal tanpa pemisah.
+- Backend menentukan jadwal dan waktu absensi.
+- Jangan mempercayai waktu dari ESP32.
+- LCD 16×2 menjadi satu-satunya media feedback perangkat.
+- Tidak menggunakan buzzer, kode buzzer, GPIO buzzer, atau library buzzer.
+
+Pastikan LCD dapat menampilkan respons yang sesuai, seperti:
+- ABSENSI BERHASIL
+- DI LUAR JADWAL
+- UID TIDAK DIKENAL
+- ANGGOTA NONAKTIF
+- BATAS WAKTU HABIS
+- JADWAL TIDAK DITEMUKAN
+- JADWAL BENTROK
+- KONEKSI GAGAL
+
+Sesuaikan pesan dengan panjang karakter LCD 16×2. Jangan menggunakan pesan lama yang mengharuskan pengurus membuka sesi secara manual.
+
+## 9. DATABASE, MIGRATION, DAN KEAMANAN
+
+- Periksa struktur database dan implementasi yang sudah ada sebelum mengubah schema.
+- Buat migration yang aman dan kompatibel dengan data lama.
+- Jangan menghapus atau menimpa data absensi, anggota, jadwal, maupun audit log.
+- Gunakan transaksi database untuk operasi yang saling berkaitan.
+- Pertahankan audit log untuk perubahan jadwal, penggantian, dan koreksi absensi.
+- Hindari duplikasi absensi.
+- Jangan menyimpan API key mentah.
+- Jangan mencetak credential atau secret ke log.
+- Jangan menjalankan migration destruktif atau mengubah data produksi secara massal tanpa persetujuan Project Owner.
+- Jika ada data lama yang tidak kompatibel, buat laporan dan rencana migrasi yang aman.
+
+## 10. TESTING
+
+Tambahkan dan jalankan pengujian untuk seluruh aturan baru, minimal mencakup:
+
+1. Perhitungan siklus Week 1 dan Week 2.
+2. Pergantian siklus setiap 14 hari.
+3. Pergantian bulan dan tahun.
+4. Siklus belum memiliki tanggal awal.
+5. Scan tepat sebelum batas waktu.
+6. Scan tepat pada batas waktu.
+7. Scan setelah batas waktu.
+8. Tidak ada jadwal yang cocok.
+9. Lebih dari satu jadwal yang cocok.
+10. Anggota yang terdaftar dalam roster.
+11. Anggota yang tidak terdaftar dalam roster.
+12. Anggota pengganti.
+13. Penggantian jadwal yang bentrok.
+14. Hak akses Sekbid 2 dan Sekbid 6.
+15. Hak akses SUPERADMIN.
+16. Duplicate scan dan idempotency.
+17. Integrasi API dengan format UID canonical.
+18. Respons firmware dan tampilan LCD.
+
+Jalankan seluruh test suite yang tersedia, Prisma validation/generation, lint, dan production build.
+
+Jangan mengklaim firmware berhasil dikompilasi atau hardware berhasil diuji jika memang belum dilakukan. Bedakan hasil pengujian otomatis, kompilasi firmware, pengujian fisik, dan deployment.
+
+## 11. LAPORAN AKHIR
+
+Setelah semua pekerjaan selesai, berikan satu laporan akhir dalam Bahasa Indonesia yang sederhana dan jelas dengan format:
+
+1. Ringkasan pekerjaan.
+2. Fitur yang berhasil dibuat.
+3. Perubahan database dan migration.
+4. Hasil testing beserta jumlah test yang lulus/gagal.
+5. Status lint dan production build.
+6. Status firmware compilation.
+7. Status pengujian hardware fisik.
+8. Status deployment.
+9. Kendala atau keputusan yang masih dibutuhkan dari Project Owner.
+10. File penting yang dibuat atau diubah.
+
+Jangan menyatakan proyek production-ready jika firmware belum dikompilasi, hardware belum diuji, atau deployment belum diverifikasi.
+
+**PRINSIP PELAKSANAAN:** Kerjakan seluruh implementasi yang aman dalam satu milestone. Jangan berhenti hanya untuk meminta persetujuan atas keputusan teknis kecil. Jika ada keputusan bisnis yang belum diberikan, buat konfigurasi yang aman dan tandai sebagai belum dikonfigurasi. Jangan mengarang data atau mengambil keputusan bisnis sendiri.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-08T16:24:27+07:00.
+</ADDITIONAL_METADATA>

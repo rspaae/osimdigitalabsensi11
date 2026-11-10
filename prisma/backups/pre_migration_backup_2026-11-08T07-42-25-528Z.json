@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-11-08T07:42:25.530Z",
+  "database": "railway",
+  "server_version": "PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+  "schemas": [
+    "public",
+    "information_schema",
+    "pg_catalog",
+    "pg_toast"
+  ],
+  "public_tables_count": 0,
+  "public_tables": [],
+  "public_types_count": 0,
+  "public_types": [],
+  "extensions": [
+    {
+      "extname": "plpgsql",
+      "extversion": "1.0"
+    }
+  ],
+  "state": "EMPTY_INITIAL_STATE"
+}

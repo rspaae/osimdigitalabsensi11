@@ -1,0 +1,406 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  VIEWER
+}
+
+enum AdminScope {
+  GENERAL
+  SECRETARY
+  DISCIPLINE_4P
+  TREASURER
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  ALUMNI
+}
+
+enum OrganizationType {
+  OSIS
+  MPK
+  GENERAL
+}
+
+enum ActivityType {
+  ROUTINE
+  SPECIAL
+}
+
+enum ScheduleStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum AttendanceStatus {
+  HADIR
+  TERLAMBAT
+  IZIN
+  SAKIT
+  ALPA
+  DI_LUAR_JADWAL
+}
+
+enum CycleWeek {
+  WEEK_1
+  WEEK_2
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum SubstitutionStatus {
+  APPROVED
+  CANCELLED
+}
+
+enum AttendanceMethod {
+  RFID
+  MANUAL
+}
+
+enum ViolationStatus {
+  PENDING
+  RESOLVED
+}
+
+// ==========================================
+// MODELS
+// ==========================================
+
+model User {
+  id            String      @id @default(uuid())
+  username      String      @unique
+  email         String      @unique
+  password_hash String
+  role          Role
+  admin_scope   AdminScope?
+  member_id     String?     @unique
+  is_active     Boolean     @default(true)
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+
+  member                     Member?            @relation(fields: [member_id], references: [id], onDelete: SetNull)
+  audit_logs                 AuditLog[]
+  violations_reported        Violation[]
+  duty_substitutions_created DutySubstitution[]
+
+  @@index([role])
+  @@index([is_active])
+  @@map("users")
+}
+
+model Member {
+  id                String           @id @default(uuid())
+  nis               String?          @unique
+  nisn              String?
+  full_name         String
+  class_grade       String?
+  organization_type OrganizationType
+  rfid_uid          String?          @unique
+  photo_url         String?
+  status            MemberStatus     @default(ACTIVE)
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+
+  user                          User?
+  positions                     MemberPosition[]
+  attendances                   Attendance[]
+  violations                    Violation[]
+  duty_rosters                  DutyRosterMember[]
+  original_duty_substitutions   DutySubstitution[] @relation("OriginalDutySubstitutions")
+  substitute_duty_substitutions DutySubstitution[] @relation("SubstituteDutySubstitutions")
+
+  @@index([status])
+  @@index([organization_type])
+  @@index([class_grade])
+  @@index([rfid_uid])
+  @@map("members")
+}
+
+model Position {
+  id                String           @id @default(uuid())
+  name              String           @unique
+  level             Int
+  organization_type OrganizationType @default(GENERAL)
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+
+  member_positions MemberPosition[]
+
+  @@map("positions")
+}
+
+model MemberPosition {
+  id            String   @id @default(uuid())
+  member_id     String
+  position_id   String
+  sekbid_id     String?
+  commission_id String?
+  period_year   String
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  member     Member      @relation(fields: [member_id], references: [id], onDelete: Restrict)
+  position   Position    @relation(fields: [position_id], references: [id], onDelete: Restrict)
+  sekbid     Sekbid?     @relation(fields: [sekbid_id], references: [id], onDelete: SetNull)
+  commission Commission? @relation(fields: [commission_id], references: [id], onDelete: SetNull)
+
+  @@unique([member_id, position_id, period_year])
+  @@index([period_year])
+  @@index([is_active])
+  @@map("member_positions")
+}
+
+model Sekbid {
+  id          String   @id @default(uuid())
+  number      Int      @unique
+  name        String
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  member_positions MemberPosition[]
+
+  @@map("sekbids")
+}
+
+model Commission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  member_positions MemberPosition[]
+
+  @@map("commissions")
+}
+
+model Activity {
+  id                             String       @id @default(uuid())
+  code                           String       @unique
+  name                           String
+  type                           ActivityType @default(ROUTINE)
+  description                    String?
+  default_late_threshold_minutes Int          @default(15)
+  is_active                      Boolean      @default(true)
+  created_at                     DateTime     @default(now())
+  updated_at                     DateTime     @updatedAt
+
+  schedules      ActivitySchedule[]
+  duty_schedules DutySchedule[]
+
+  @@index([is_active])
+  @@index([type])
+  @@map("activities")
+}
+
+model ActivitySchedule {
+  id             String         @id @default(uuid())
+  activity_id    String
+  device_id      String?
+  title          String?
+  date           DateTime       @db.Date
+  start_time     DateTime       @db.Timestamptz(3)
+  late_threshold DateTime       @db.Timestamptz(3)
+  end_time       DateTime       @db.Timestamptz(3)
+  status         ScheduleStatus @default(DRAFT)
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+
+  activity    Activity     @relation(fields: [activity_id], references: [id], onDelete: Restrict)
+  device      Device?      @relation(fields: [device_id], references: [id], onDelete: SetNull)
+  attendances Attendance[]
+
+  @@index([date])
+  @@index([status])
+  @@index([activity_id, date])
+  @@map("activity_schedules")
+}
+
+model Attendance {
+  id               String           @id @default(uuid())
+  member_id        String
+  schedule_id      String
+  duty_schedule_id String?
+  is_substitution  Boolean          @default(false)
+  scan_time        DateTime         @default(now())
+  status           AttendanceStatus
+  method           AttendanceMethod @default(RFID)
+  notes            String?
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+
+  member   Member           @relation(fields: [member_id], references: [id], onDelete: Restrict)
+  schedule ActivitySchedule @relation(fields: [schedule_id], references: [id], onDelete: Restrict)
+
+  @@unique([member_id, schedule_id])
+  @@index([schedule_id, status])
+  @@index([member_id, status])
+  @@index([scan_time])
+  @@index([duty_schedule_id])
+  @@map("attendances")
+}
+
+model Violation {
+  id          String          @id @default(uuid())
+  member_id   String
+  category    String
+  description String
+  date        DateTime        @db.Date
+  sanction    String?
+  status      ViolationStatus @default(PENDING)
+  reported_by String
+  resolved_at DateTime?
+  created_at  DateTime        @default(now())
+  updated_at  DateTime        @updatedAt
+
+  member   Member @relation(fields: [member_id], references: [id], onDelete: Restrict)
+  reporter User   @relation(fields: [reported_by], references: [id], onDelete: Restrict)
+
+  @@index([member_id, status])
+  @@index([date])
+  @@map("violations")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  user_id     String
+  action      String
+  entity_type String
+  entity_id   String
+  old_values  Json?
+  new_values  Json?
+  reason      String
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@index([entity_type, entity_id])
+  @@index([user_id])
+  @@index([action])
+  @@index([created_at])
+  @@map("audit_logs")
+}
+
+model Device {
+  id           String    @id @default(uuid())
+  device_code  String    @unique
+  name         String
+  location     String
+  api_key_hash String
+  last_seen    DateTime?
+  is_active    Boolean   @default(true)
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  schedules ActivitySchedule[]
+
+  @@index([is_active])
+  @@index([device_code])
+  @@map("devices")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model DutySchedule {
+  id              String             @id @default(uuid())
+  activity_id     String
+  cycle_week      CycleWeek
+  day_of_week     DayOfWeek
+  start_time_wib  String             // e.g. "05:30"
+  cutoff_time_wib String             // e.g. "06:00" for Sapa Pagi, "06:10" for Danusan
+  title           String?
+  is_active       Boolean            @default(true)
+  created_at      DateTime           @default(now())
+  updated_at      DateTime           @updatedAt
+
+  activity        Activity           @relation(fields: [activity_id], references: [id], onDelete: Restrict)
+  roster_members  DutyRosterMember[]
+  substitutions   DutySubstitution[]
+
+  @@unique([activity_id, cycle_week, day_of_week])
+  @@index([cycle_week, day_of_week])
+  @@index([is_active])
+  @@map("duty_schedules")
+}
+
+model DutyRosterMember {
+  id               String       @id @default(uuid())
+  duty_schedule_id String
+  member_id        String
+  notes            String?
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+
+  duty_schedule    DutySchedule @relation(fields: [duty_schedule_id], references: [id], onDelete: Cascade)
+  member           Member       @relation(fields: [member_id], references: [id], onDelete: Restrict)
+
+  @@unique([duty_schedule_id, member_id])
+  @@index([duty_schedule_id])
+  @@index([member_id])
+  @@map("duty_roster_members")
+}
+
+model DutySubstitution {
+  id                   String             @id @default(uuid())
+  duty_schedule_id     String
+  duty_date            DateTime           @db.Date
+  original_member_id   String
+  substitute_member_id String
+  reason               String
+  status               SubstitutionStatus @default(APPROVED)
+  created_by           String
+  created_at           DateTime           @default(now())
+  updated_at           DateTime           @updatedAt
+
+  duty_schedule        DutySchedule       @relation(fields: [duty_schedule_id], references: [id], onDelete: Restrict)
+  original_member      Member             @relation("OriginalDutySubstitutions", fields: [original_member_id], references: [id], onDelete: Restrict)
+  substitute_member    Member             @relation("SubstituteDutySubstitutions", fields: [substitute_member_id], references: [id], onDelete: Restrict)
+  creator              User               @relation(fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([duty_date])
+  @@index([duty_schedule_id, duty_date])
+  @@index([original_member_id, duty_date])
+  @@index([substitute_member_id, duty_date])
+  @@map("duty_substitutions")
+}

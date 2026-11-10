@@ -1,0 +1,12 @@
+[
+  {
+    "note": "Ini adalah FILE CONTOH. Ganti dengan data anggota yang sebenarnya.",
+    "note2": "Bidang 'nis' atau 'name' wajib ada. 'nis' lebih diprioritaskan.",
+    "note3": "Hapus baris ini sebelum menjalankan script."
+  },
+  { "nis": "123456", "name": "Nama Anggota 1", "week": "WEEK_1", "day": "MONDAY" },
+  { "nis": "234567", "name": "Nama Anggota 2", "week": "WEEK_1", "day": "MONDAY" },
+  { "nis": "345678", "name": "Nama Anggota 3", "week": "WEEK_1", "day": "TUESDAY" },
+  { "nis": "456789", "name": "Nama Anggota 4", "week": "WEEK_2", "day": "MONDAY" },
+  { "nis": "567890", "name": "Nama Anggota 5", "week": "WEEK_2", "day": "FRIDAY" }
+]
