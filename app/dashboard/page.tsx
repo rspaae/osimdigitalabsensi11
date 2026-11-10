@@ -150,8 +150,9 @@ export default async function DashboardPage() {
             <span className="overview-shortcut-count">{numberFormat.format(rosterAssignments)} penugasan aktif</span>
           </div>
           <div className="overview-shortcut-grid">
+            <Link href="/dashboard/attendance" className="overview-shortcut-card"><span className="overview-shortcut-icon">P</span><span><strong>Rekap presensi</strong><small>Lihat log ketukan kartu RFID realtime</small></span><span className="overview-shortcut-arrow">→</span></Link>
             <Link href="/dashboard/members" className="overview-shortcut-card"><span className="overview-shortcut-icon">A</span><span><strong>Data anggota</strong><small>Nama, organisasi, dan UID kartu</small></span><span className="overview-shortcut-arrow">→</span></Link>
-            <Link href="/dashboard/duty/sapa-pagi" className="overview-shortcut-card"><span className="overview-shortcut-icon">J</span><span><strong>Jadwal &amp; roster</strong><small>Kelola penugasan Sapa Pagi</small></span><span className="overview-shortcut-arrow">→</span></Link>
+            <Link href="/dashboard/duty/sapa-pagi" className="overview-shortcut-card"><span className="overview-shortcut-icon">J</span><span><strong>Jadwal &amp; roster</strong><small>Kelola penugasan Sapa Pagi &amp; Danus</small></span><span className="overview-shortcut-arrow">→</span></Link>
             <Link href="/dashboard/devices" className="overview-shortcut-card"><span className="overview-shortcut-icon">I</span><span><strong>Perangkat IoT</strong><small>Registrasi ESP32 dan status koneksi</small></span><span className="overview-shortcut-arrow">→</span></Link>
           </div>
         </section>

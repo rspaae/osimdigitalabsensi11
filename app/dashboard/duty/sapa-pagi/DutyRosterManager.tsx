@@ -21,7 +21,18 @@ export interface DutyMember {
   full_name: string;
   class_grade: string | null;
   organization_type: OrganizationType;
+  rfid_uid: string | null;
   status: "ACTIVE" | "INACTIVE" | "ALUMNI";
+}
+
+export interface RosterMemberItem {
+  member_id: string;
+  full_name: string;
+  nis: string | null;
+  class_grade: string | null;
+  organization_type: OrganizationType;
+  rfid_uid: string | null;
+  status: string;
 }
 
 export interface DutySchedule {
@@ -33,11 +44,7 @@ export interface DutySchedule {
   title: string | null;
   is_active: boolean;
   attendance_count: number;
-  roster_members: Array<{
-    member_id: string;
-    full_name: string;
-    status: string;
-  }>;
+  roster_members: RosterMemberItem[];
 }
 
 export interface RosterEntry {
@@ -47,12 +54,21 @@ export interface RosterEntry {
   day_of_week: DutyDay;
 }
 
+export interface TodayAttendanceInfo {
+  member_id: string;
+  status: string;
+  scan_time: string;
+}
+
 interface Props {
   initialActivity: DutyActivity | null;
   initialSchedules: DutySchedule[];
   members: DutyMember[];
   rosterEntries: RosterEntry[];
   cycleStartDate: string | null;
+  todayDate: string;
+  todayDayOfWeek: string;
+  todayAttendances: TodayAttendanceInfo[];
 }
 
 interface ApiPayload {
@@ -73,14 +89,9 @@ const DAY_LABELS: Record<DutyDay, string> = {
   SATURDAY: "Sabtu",
   SUNDAY: "Minggu",
 };
-const CUTOFF_TIME = "06:00";
 
 function keyOf(week: CycleWeek, day: DutyDay) {
   return `${week}:${day}`;
-}
-
-function normalizeName(name: string) {
-  return name.trim().toLocaleLowerCase("id-ID");
 }
 
 async function requestData<T>(url: string, method: string, body?: unknown): Promise<T> {
@@ -99,398 +110,389 @@ async function requestData<T>(url: string, method: string, body?: unknown): Prom
   return payload.data as T;
 }
 
-type MatchResult =
-  | { kind: "matched"; member: DutyMember }
-  | { kind: "missing" }
-  | { kind: "ambiguous" }
-  | { kind: "inactive" }
-  | { kind: "organization_mismatch" };
-
-function resolveRosterEntry(entry: RosterEntry, membersByName: Map<string, DutyMember[]>): MatchResult {
-  const candidates = membersByName.get(normalizeName(entry.name)) ?? [];
-  if (candidates.length === 0) return { kind: "missing" };
-  if (candidates.length > 1) return { kind: "ambiguous" };
-
-  const member = candidates[0];
-  if (member.status !== "ACTIVE") return { kind: "inactive" };
-  if (member.organization_type !== entry.organization_type) {
-    return { kind: "organization_mismatch" };
-  }
-  return { kind: "matched", member };
-}
-
 export default function DutyRosterManager({
   initialActivity,
   initialSchedules,
   members,
   rosterEntries,
   cycleStartDate,
+  todayDate,
+  todayDayOfWeek,
+  todayAttendances,
 }: Props) {
   const router = useRouter();
-  const [activity, setActivity] = useState(initialActivity);
-  const [schedules, setSchedules] = useState(initialSchedules);
-  const [startTime, setStartTime] = useState("05:30");
+  const [selectedWeek, setSelectedWeek] = useState<CycleWeek>("WEEK_1");
+  const [schedules, setSchedules] = useState<DutySchedule[]>(initialSchedules);
+  const [selectedMemberToAdd, setSelectedMemberToAdd] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const membersByName = useMemo(() => {
-    const result = new Map<string, DutyMember[]>();
-    for (const member of members) {
-      const key = normalizeName(member.full_name);
-      result.set(key, [...(result.get(key) ?? []), member]);
+  const schedulesByKey = useMemo(() => {
+    const map = new Map<string, DutySchedule>();
+    for (const schedule of schedules) {
+      map.set(keyOf(schedule.cycle_week, schedule.day_of_week), schedule);
     }
-    return result;
-  }, [members]);
+    return map;
+  }, [schedules]);
 
-  const matchResults = useMemo(
-    () => rosterEntries.map((entry) => ({ entry, result: resolveRosterEntry(entry, membersByName) })),
-    [membersByName, rosterEntries]
-  );
+  const todayAttendanceMap = useMemo(() => {
+    const map = new Map<string, TodayAttendanceInfo>();
+    for (const att of todayAttendances) {
+      map.set(att.member_id, att);
+    }
+    return map;
+  }, [todayAttendances]);
 
-  const schedulesByKey = useMemo(
-    () => new Map(schedules.map((schedule) => [keyOf(schedule.cycle_week, schedule.day_of_week), schedule])),
-    [schedules]
-  );
+  // Tambah anggota ke roster harian
+  async function handleAddMember(scheduleId: string) {
+    const memberId = selectedMemberToAdd[scheduleId];
+    if (!memberId) {
+      setMessage({ type: "error", text: "Pilih anggota terlebih dahulu dari daftar." });
+      return;
+    }
 
-  const matchedCount = matchResults.filter(({ result }) => result.kind === "matched").length;
-  const activeScheduleCount = schedules.filter((schedule) => schedule.is_active).length;
-
-  function mergeSchedule(updated: DutySchedule) {
-    setSchedules((current) => {
-      const map = new Map(current.map((schedule) => [keyOf(schedule.cycle_week, schedule.day_of_week), schedule]));
-      map.set(keyOf(updated.cycle_week, updated.day_of_week), updated);
-      return [...map.values()];
-    });
-  }
-
-  async function prepareSchedules() {
-    if (busy) return;
     setBusy(true);
     setMessage(null);
-    const errors: string[] = [];
 
     try {
-      let currentActivity = activity;
-      if (!currentActivity) {
-        currentActivity = await requestData<DutyActivity>("/api/v1/activities", "POST", {
-          code: "SAPA_PAGI",
-          name: "Sapa Pagi",
-          type: "ROUTINE",
-          description: "Kegiatan penyambutan pagi OSIS dan MPK.",
-          default_late_threshold_minutes: 15,
-          is_active: true,
-        });
-        setActivity(currentActivity);
-      } else if (!currentActivity.is_active) {
-        currentActivity = await requestData<DutyActivity>(
-          `/api/v1/activities/${currentActivity.id}`,
-          "PATCH",
-          { is_active: true }
+      await requestData(`/api/v1/duty/schedules/${scheduleId}/roster/add`, "POST", {
+        member_ids: [memberId],
+      });
+
+      const memberObj = members.find((m) => m.id === memberId);
+      if (memberObj) {
+        setSchedules((prev) =>
+          prev.map((s) => {
+            if (s.id !== scheduleId) return s;
+            const alreadyExists = s.roster_members.some((r) => r.member_id === memberId);
+            if (alreadyExists) return s;
+            return {
+              ...s,
+              roster_members: [
+                ...s.roster_members,
+                {
+                  member_id: memberObj.id,
+                  full_name: memberObj.full_name,
+                  nis: memberObj.nis,
+                  class_grade: memberObj.class_grade,
+                  organization_type: memberObj.organization_type,
+                  rfid_uid: memberObj.rfid_uid,
+                  status: memberObj.status,
+                },
+              ],
+            };
+          })
         );
-        setActivity(currentActivity);
       }
 
-      const working = new Map(
-        schedules.map((schedule) => [keyOf(schedule.cycle_week, schedule.day_of_week), schedule])
-      );
-
-      for (const week of WEEKS) {
-        for (const day of DAYS) {
-          const scheduleKey = keyOf(week, day);
-          const existing = working.get(scheduleKey);
-          if (existing) continue;
-
-          try {
-            const createdData = await requestData<Pick<DutySchedule, "id" | "cycle_week" | "day_of_week" | "start_time_wib" | "cutoff_time_wib" | "title" | "is_active">>("/api/v1/duty/schedules", "POST", {
-              activity_id: currentActivity.id,
-              cycle_week: week,
-              day_of_week: day,
-              start_time_wib: startTime,
-              cutoff_time_wib: CUTOFF_TIME,
-              title: `Sapa Pagi Week ${week === "WEEK_1" ? "1" : "2"} - ${DAY_LABELS[day]}`,
-              is_active: true,
-            });
-            working.set(scheduleKey, { ...createdData, attendance_count: 0, roster_members: [] });
-          } catch (error) {
-            errors.push(`${week === "WEEK_1" ? "Week 1" : "Week 2"} ${DAY_LABELS[day]}: ${error instanceof Error ? error.message : "gagal dibuat"}`);
-          }
-        }
-      }
-
-      setSchedules([...working.values()]);
+      setSelectedMemberToAdd((prev) => ({ ...prev, [scheduleId]: "" }));
+      setMessage({ type: "success", text: "Petugas piket berhasil ditambahkan ke jadwal." });
       router.refresh();
-
-      if (errors.length > 0) {
-        setMessage({ type: "error", text: `Sebagian jadwal belum siap: ${errors.join("; ")}` });
-      } else {
-        setMessage({ type: "success", text: "Kegiatan Sapa Pagi aktif dan seluruh jadwal yang belum ada berhasil dibuat." });
-      }
-    } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Gagal menyiapkan kegiatan dan jadwal." });
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof Error ? err.message : "Gagal menambahkan anggota." });
     } finally {
       setBusy(false);
     }
   }
 
-  async function activateSchedule(schedule: DutySchedule) {
-    if (busy) return;
-    if (schedule.cutoff_time_wib !== CUTOFF_TIME) {
-      setMessage({ type: "error", text: "Atur cutoff ke 06:00 terlebih dahulu agar jadwal Sapa Pagi mengikuti aturan absensi." });
-      return;
-    }
+  // Hapus anggota dari roster harian
+  async function handleRemoveMember(scheduleId: string, memberId: string, memberName: string) {
+    if (!confirm(`Hapus ${memberName} dari daftar piket hari ini?`)) return;
+
     setBusy(true);
     setMessage(null);
+
     try {
-      const updated = await requestData<Pick<DutySchedule, "is_active">>(
-        `/api/v1/duty/schedules/${schedule.id}`,
-        "PATCH",
-        { is_active: true }
+      const schedule = schedules.find((s) => s.id === scheduleId);
+      if (!schedule) return;
+
+      const remainingMemberIds = schedule.roster_members
+        .filter((r) => r.member_id !== memberId)
+        .map((r) => r.member_id);
+
+      await requestData(`/api/v1/duty/schedules/${scheduleId}/roster`, "POST", {
+        member_ids: remainingMemberIds,
+      });
+
+      setSchedules((prev) =>
+        prev.map((s) => {
+          if (s.id !== scheduleId) return s;
+          return {
+            ...s,
+            roster_members: s.roster_members.filter((r) => r.member_id !== memberId),
+          };
+        })
       );
-      mergeSchedule({ ...schedule, is_active: updated.is_active });
-      setMessage({ type: "success", text: `Jadwal ${schedule.cycle_week === "WEEK_1" ? "Week 1" : "Week 2"} ${DAY_LABELS[schedule.day_of_week]} diaktifkan.` });
+
+      setMessage({ type: "success", text: `${memberName} telah dihapus dari roster piket.` });
       router.refresh();
-    } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Jadwal gagal diaktifkan." });
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof Error ? err.message : "Gagal menghapus anggota." });
     } finally {
       setBusy(false);
     }
   }
 
-  async function correctScheduleTime(schedule: DutySchedule) {
-    if (busy) return;
-    if (schedule.attendance_count > 0) {
-      setMessage({ type: "error", text: "Jam tidak dapat diubah karena jadwal ini sudah memiliki riwayat absensi." });
-      return;
-    }
-
+  // Sinkronisasi massal roster bawaan jika diperlukan
+  async function handleBulkApplyRoster() {
     setBusy(true);
     setMessage(null);
     try {
-      const updated = await requestData<Pick<DutySchedule, "start_time_wib" | "cutoff_time_wib">>(
-        `/api/v1/duty/schedules/${schedule.id}`,
-        "PATCH",
-        { start_time_wib: startTime, cutoff_time_wib: CUTOFF_TIME }
-      );
-      mergeSchedule({ ...schedule, ...updated, attendance_count: 0 });
-      setMessage({ type: "success", text: `Jam ${DAY_LABELS[schedule.day_of_week]} diperbarui ke ${startTime}–${CUTOFF_TIME} WIB.` });
-      router.refresh();
-    } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Jam jadwal gagal diperbarui." });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function applyMatchedRoster() {
-    if (busy) return;
-    setBusy(true);
-    setMessage(null);
-    const results: string[] = [];
-    const errors: string[] = [];
-
-    try {
+      let linked = 0;
       for (const week of WEEKS) {
         for (const day of DAYS) {
           const schedule = schedulesByKey.get(keyOf(week, day));
-          if (!schedule?.is_active || schedule.cutoff_time_wib !== CUTOFF_TIME) continue;
-
-          const memberIds = [...new Set(
-            matchResults
-              .filter(({ entry, result }) =>
-                entry.cycle_week === week &&
-                entry.day_of_week === day &&
-                result.kind === "matched"
-              )
-              .map(({ result }) => result.kind === "matched" ? result.member.id : "")
-              .filter(Boolean)
-          )];
-          if (memberIds.length === 0) continue;
-
-          try {
-            const result = await requestData<{ added_count: number }>(
-              `/api/v1/duty/schedules/${schedule.id}/roster/add`,
-              "POST",
-              { member_ids: memberIds }
+          if (!schedule) continue;
+          const entriesForDay = rosterEntries.filter(
+            (e) => e.cycle_week === week && e.day_of_week === day
+          );
+          const matchedIds: string[] = [];
+          for (const entry of entriesForDay) {
+            const found = members.find(
+              (m) =>
+                m.full_name.trim().toLowerCase() === entry.name.trim().toLowerCase() &&
+                m.organization_type === entry.organization_type
             );
-            results.push(`${DAY_LABELS[day]} ${week === "WEEK_1" ? "W1" : "W2"}: ${result.added_count} ditambahkan`);
-          } catch (error) {
-            errors.push(`${week === "WEEK_1" ? "Week 1" : "Week 2"} ${DAY_LABELS[day]}: ${error instanceof Error ? error.message : "gagal"}`);
+            if (found && !matchedIds.includes(found.id)) {
+              matchedIds.push(found.id);
+            }
+          }
+          if (matchedIds.length > 0) {
+            await requestData(`/api/v1/duty/schedules/${schedule.id}/roster/add`, "POST", {
+              member_ids: matchedIds,
+            });
+            linked += matchedIds.length;
           }
         }
       }
-
+      setMessage({ type: "success", text: `Sinkronisasi selesai: ${linked} penugasan roster berhasil dihubungkan.` });
       router.refresh();
-      if (errors.length > 0) {
-        setMessage({ type: "error", text: `Ada roster yang gagal ditautkan: ${errors.join("; ")}` });
-      } else if (results.length === 0) {
-        setMessage({ type: "error", text: "Belum ada jadwal aktif dengan anggota yang cocok untuk ditautkan." });
-      } else {
-        setMessage({ type: "success", text: `Pencocokan selesai. ${results.join(" · ")}. Penugasan roster lama tetap dipertahankan.` });
-      }
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof Error ? err.message : "Gagal sinkronisasi roster." });
     } finally {
       setBusy(false);
     }
   }
 
-  const canApplyRoster = matchResults.some(({ result }) => result.kind === "matched") &&
-    schedules.some((schedule) => schedule.is_active && schedule.cutoff_time_wib === CUTOFF_TIME) &&
-    activity?.is_active === true;
-
   return (
-    <div className="cycle-settings-container">
-      {!cycleStartDate && (
-        <div className="dashboard-alert dashboard-alert--warning" role="status">
-          Siklus belum dikonfigurasi. Jadwal dan roster dapat disiapkan sekarang, tetapi scan RFID akan ditolak sampai tanggal mulai siklus diatur.
-          {" "}<Link href="/dashboard/settings/cycle" className="dashboard-alert-link">Atur siklus</Link>
-        </div>
-      )}
-
-      <section className="member-form-card" aria-labelledby="schedule-setup-title">
-        <h2 id="schedule-setup-title" className="cycle-section-title">1. Siapkan kegiatan dan jadwal</h2>
-        <p className="cycle-form-description">
-          Sistem membuat satu jadwal untuk setiap hari Senin–Jumat pada Week 1 dan Week 2. Jadwal yang sudah ada tidak ditimpa.
-        </p>
-        <div className="member-form-grid">
-          <div className="cycle-field">
-            <label htmlFor="sapa-start-time" className="cycle-field-label">Jam mulai (WIB)</label>
-            <input
-              id="sapa-start-time"
-              type="time"
-              className="cycle-field-input"
-              value={startTime}
-              max={CUTOFF_TIME}
-              onChange={(event) => setStartTime(event.target.value)}
-              disabled={busy}
-              required
-            />
-            <span className="cycle-field-hint">Default 05.30 mengikuti panduan roster yang tersedia.</span>
-          </div>
-          <div className="cycle-field">
-            <span className="cycle-field-label">Batas scan (WIB)</span>
-            <div className="member-readonly-value">06.00 — setelah cutoff scan ditolak</div>
-          </div>
-        </div>
-        {activity && (
-          <p className="member-status-note">
-            Kegiatan {activity.name} ({activity.code}) · {activity.is_active ? "aktif" : "nonaktif"} · {activeScheduleCount}/10 jadwal aktif
+    <div className="duty-roster-container">
+      {/* Banner Penjelasan Otomatisasi */}
+      <div className="roster-automation-banner">
+        <span className="roster-automation-icon" aria-hidden="true">✓</span>
+        <div>
+          <h2 className="roster-automation-title">Sistem Absensi Piket Berjalan Otomatis</h2>
+          <p className="roster-automation-desc">
+            Sistem absensi berulang secara otomatis setiap hari <strong>Senin s/d Jumat (05:30 – 06:00 WIB)</strong> mengikuti siklus 14 hari.
+            <strong> Tidak perlu membuka/menutup sesi absensi manual.</strong> Siswa yang bertugas piket hari ini akan otomatis tercatat sebagai <strong>HADIR</strong> saat tap kartu RFID, sedangkan siswa lain yang hadir tetap tercatat sebagai <strong>DI_LUAR_JADWAL</strong>.
           </p>
-        )}
-        <div className="cycle-form-actions">
-          <button type="button" className="cycle-submit-btn" onClick={prepareSchedules} disabled={busy}>
-            {busy ? "Memproses..." : "Siapkan Kegiatan & Jadwal yang Belum Ada"}
-          </button>
         </div>
-      </section>
+      </div>
 
       {message && (
-        <div className={`cycle-message cycle-message--${message.type}`} role="status">
+        <div className={`cycle-message cycle-message--${message.type}`} role="status" style={{ marginBottom: 20 }}>
           {message.text}
         </div>
       )}
 
-      <section className="member-list-card" aria-labelledby="roster-import-title">
-        <div className="member-list-heading">
-          <div>
-            <h2 id="roster-import-title" className="cycle-section-title">2. Cocokkan dan hubungkan roster</h2>
-            <p className="cycle-form-description">
-              {rosterEntries.length} nama dari roster resmi dicocokkan ke {members.length} anggota. Pencocokan memakai nama persis dan organisasi; nama ambigu atau berbeda tidak ditebak.
-            </p>
-          </div>
-          <Link href="/dashboard/members" className="member-secondary-link">Kelola anggota</Link>
-        </div>
+      {/* Navigasi Pilihan Minggu (Week 1 / Week 2) */}
+      <div className="roster-tab-group" role="tablist" aria-label="Pilihan Siklus Minggu">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={selectedWeek === "WEEK_1"}
+          className={`roster-tab-btn ${selectedWeek === "WEEK_1" ? "is-active" : ""}`}
+          onClick={() => setSelectedWeek("WEEK_1")}
+        >
+          📅 MINGGU 1 (WEEK 1)
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={selectedWeek === "WEEK_2"}
+          className={`roster-tab-btn ${selectedWeek === "WEEK_2" ? "is-active" : ""}`}
+          onClick={() => setSelectedWeek("WEEK_2")}
+        >
+          📅 MINGGU 2 (WEEK 2)
+        </button>
+      </div>
 
-        {members.length === 0 && (
-          <div className="cycle-not-configured member-roster-warning">
-            <strong>Belum ada anggota terdaftar.</strong>
-            <p>Daftarkan anggota dengan nama, NIS, kelas, dan organisasi yang sesuai sebelum menghubungkan roster.</p>
-          </div>
-        )}
+      {/* Tampilan Kartu Jadwal Per Hari */}
+      <div className="duty-days-grid">
+        {DAYS.map((day) => {
+          const schedule = schedulesByKey.get(keyOf(selectedWeek, day));
+          const rosterList = schedule?.roster_members ?? [];
+          const isTodaySchedule = todayDayOfWeek === day;
 
-        <div className="member-form-actions-row">
-          <span className="member-match-summary">
-            Cocok: {matchedCount}/{rosterEntries.length} · Belum cocok/ambigu: {rosterEntries.length - matchedCount}
-          </span>
+          return (
+            <div key={keyOf(selectedWeek, day)} className={`duty-day-card ${isTodaySchedule ? "is-today" : ""}`}>
+              {/* Header Kartu Hari */}
+              <div className="duty-day-header">
+                <div className="duty-day-title-wrap">
+                  <h3 className="duty-day-name">{DAY_LABELS[day]}</h3>
+                  <span className="duty-day-time-badge">
+                    ⏰ {schedule?.start_time_wib ?? "05:30"} – {schedule?.cutoff_time_wib ?? "06:00"} WIB
+                  </span>
+                  {isTodaySchedule && (
+                    <span className="duty-today-indicator">● HARI INI</span>
+                  )}
+                </div>
+                <div>
+                  <span className="badge-status badge-hadir">
+                    {rosterList.length} Siswa Bertugas
+                  </span>
+                </div>
+              </div>
+
+              {/* Tabel Daftar Siswa Piket */}
+              {rosterList.length === 0 ? (
+                <p className="member-empty-state" style={{ padding: "16px", margin: "12px 0" }}>
+                  Belum ada siswa yang ditugaskan untuk hari {DAY_LABELS[day]}.
+                </p>
+              ) : (
+                <div className="member-table-wrap" style={{ margin: "12px 0" }}>
+                  <table className="duty-student-list">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 40 }}>No</th>
+                        <th>Nama Siswa Petugas</th>
+                        <th>Organisasi</th>
+                        <th>Kelas / NIS</th>
+                        <th>Kartu RFID</th>
+                        <th>Kehadiran Hari Ini</th>
+                        <th style={{ width: 60, textAlign: "center" }}>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rosterList.map((petugas, index) => {
+                        const att = todayAttendanceMap.get(petugas.member_id);
+                        const initial = petugas.full_name.charAt(0).toUpperCase();
+
+                        let todayStatusBadge = <span className="badge-status badge-belum">Belum Tap</span>;
+                        if (att) {
+                          if (att.status === "HADIR") {
+                            todayStatusBadge = <span className="badge-status badge-hadir">✓ HADIR</span>;
+                          } else if (att.status === "DI_LUAR_JADWAL") {
+                            todayStatusBadge = <span className="badge-status badge-diluarjadwal">DI LUAR JADWAL</span>;
+                          } else if (att.status === "TERLAMBAT") {
+                            todayStatusBadge = <span className="badge-status badge-terlambat">TERLAMBAT</span>;
+                          }
+                        }
+
+                        return (
+                          <tr key={petugas.member_id}>
+                            <td style={{ color: "var(--text-muted)" }}>{index + 1}</td>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center" }}>
+                                <span className="duty-student-avatar">{initial}</span>
+                                <strong>{petugas.full_name}</strong>
+                              </div>
+                            </td>
+                            <td>
+                              <span className={petugas.organization_type === "MPK" ? "badge-org-mpk" : "badge-org-osis"}>
+                                {petugas.organization_type}
+                              </span>
+                            </td>
+                            <td>
+                              {petugas.class_grade ?? "—"}
+                              {petugas.nis && <small style={{ display: "block", color: "var(--text-muted)" }}>NIS: {petugas.nis}</small>}
+                            </td>
+                            <td>
+                              {petugas.rfid_uid ? (
+                                <span style={{ color: "#059669", fontSize: 12, fontWeight: 600 }}>
+                                  ✓ UID: {petugas.rfid_uid}
+                                </span>
+                              ) : (
+                                <span style={{ color: "#d97706", fontSize: 12 }}>
+                                  ⚠️ Belum Ada Kartu
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              {isTodaySchedule ? todayStatusBadge : <span style={{ color: "var(--text-muted)", fontSize: 12 }}>Terjadwal</span>}
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              {schedule && (
+                                <button
+                                  type="button"
+                                  className="duty-btn-remove"
+                                  title="Hapus dari jadwal ini"
+                                  onClick={() => handleRemoveMember(schedule.id, petugas.member_id, petugas.full_name)}
+                                  disabled={busy}
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Formulir Cepat: Tambah Siswa ke Jadwal Hari Ini */}
+              {schedule && (
+                <div className="duty-add-member-form">
+                  <select
+                    className="duty-select-input"
+                    value={selectedMemberToAdd[schedule.id] ?? ""}
+                    onChange={(e) =>
+                      setSelectedMemberToAdd((prev) => ({
+                        ...prev,
+                        [schedule.id]: e.target.value,
+                      }))
+                    }
+                    disabled={busy}
+                  >
+                    <option value="">-- Pilih Siswa untuk Ditambahkan ke Roster --</option>
+                    {members
+                      .filter(
+                        (m) =>
+                          m.status === "ACTIVE" &&
+                          !rosterList.some((r) => r.member_id === m.id)
+                      )
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.full_name} ({m.organization_type} {m.class_grade ? `— ${m.class_grade}` : ""})
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="duty-btn-add"
+                    onClick={() => handleAddMember(schedule.id)}
+                    disabled={busy || !selectedMemberToAdd[schedule.id]}
+                  >
+                    + Tambah Petugas
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Accordion Pengaturan Teknis & Sinkronisasi */}
+      <details className="member-issue-details" style={{ maxWidth: "100%", marginTop: 32, background: "white", padding: 16, border: "1px solid var(--border-default)", borderRadius: 10 }}>
+        <summary style={{ fontSize: 13, color: "var(--text-secondary)", cursor: "pointer" }}>
+          ⚙️ Pengaturan Teknis &amp; Alat Sinkronisasi Massal (Klik untuk Membuka)
+        </summary>
+        <div style={{ marginTop: 14 }}>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px" }}>
+            Fitur di bawah ini hanya digunakan bila kamu ingin melakukan sinkronisasi ulang seluruh daftar nama dari file master JSON ke jadwal.
+          </p>
           <button
             type="button"
             className="cycle-submit-btn"
-            onClick={applyMatchedRoster}
-            disabled={busy || !canApplyRoster}
+            style={{ width: "auto" }}
+            onClick={handleBulkApplyRoster}
+            disabled={busy}
           >
-            {busy ? "Menghubungkan..." : "Hubungkan semua nama yang cocok"}
+            {busy ? "Memproses..." : "Sinkronkan Ulang Semua Nama Roster"}
           </button>
         </div>
-
-        <div className="member-table-wrap">
-          <table className="member-table">
-            <thead>
-              <tr>
-                <th scope="col">Siklus</th>
-                <th scope="col">Hari</th>
-                <th scope="col">Jam</th>
-                <th scope="col">Roster</th>
-                <th scope="col">Anggota cocok</th>
-                <th scope="col">Status</th>
-                <th scope="col">Tindakan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {WEEKS.flatMap((week) => DAYS.map((day) => {
-                const schedule = schedulesByKey.get(keyOf(week, day));
-                const entries = matchResults.filter(({ entry }) => entry.cycle_week === week && entry.day_of_week === day);
-                const exact = entries.filter(({ result }) => result.kind === "matched");
-                const issues = entries.filter(({ result }) => result.kind !== "matched");
-                const assigned = schedule?.roster_members.length ?? 0;
-                return (
-                  <tr key={keyOf(week, day)}>
-                    <td>{week === "WEEK_1" ? "Week 1" : "Week 2"}</td>
-                    <td>{DAY_LABELS[day]}</td>
-                    <td>{schedule ? `${schedule.start_time_wib}–${schedule.cutoff_time_wib}` : "—"}</td>
-                    <td>{entries.length} nama · {assigned} terhubung</td>
-                    <td>{exact.length}/{entries.length}</td>
-                    <td>
-                      {!schedule ? "Jadwal belum dibuat" : schedule.cutoff_time_wib !== CUTOFF_TIME ? "Periksa cutoff" : !schedule.is_active ? "Nonaktif" : "Siap"}
-                    </td>
-                    <td>
-                      {schedule && schedule.cutoff_time_wib !== CUTOFF_TIME ? schedule.attendance_count === 0 ? (
-                        <button type="button" className="member-text-button" disabled={busy} onClick={() => correctScheduleTime(schedule)}>
-                          Atur jam
-                        </button>
-                      ) : (
-                        <span className="member-action-hint">Ada riwayat; jam terkunci</span>
-                      ) : schedule && !schedule.is_active ? (
-                        <button type="button" className="member-text-button" disabled={busy} onClick={() => activateSchedule(schedule)}>
-                          Aktifkan
-                        </button>
-                      ) : schedule && schedule.is_active && schedule.cutoff_time_wib !== CUTOFF_TIME ? (
-                        <span className="member-action-hint">Cutoff harus 06.00</span>
-                      ) : !schedule ? (
-                        <span className="member-action-hint">Siapkan jadwal dahulu</span>
-                      ) : (
-                        <span className="member-action-hint">Aktif</span>
-                      )}
-                      {issues.length > 0 && (
-                        <details className="member-issue-details">
-                          <summary>{issues.length} perlu ditinjau</summary>
-                          <ul>
-                            {issues.map(({ entry, result }, index) => (
-                              <li key={`${entry.name}-${index}`}>
-                                {entry.name}: {result.kind === "missing" ? "belum terdaftar" : result.kind === "ambiguous" ? "nama ganda; perlu verifikasi NIS" : result.kind === "inactive" ? "anggota tidak aktif" : "organisasi tidak sama"}
-                              </li>
-                            ))}
-                          </ul>
-                        </details>
-                      )}
-                    </td>
-                  </tr>
-                );
-              }))}
-            </tbody>
-          </table>
-        </div>
-        <p className="cycle-field-hint member-roster-footnote">
-          Penautan bersifat tambah-saja dan idempoten: mengulang proses tidak menghapus atau mengganti penugasan yang sudah ada.
-        </p>
-      </section>
+      </details>
     </div>
   );
 }
