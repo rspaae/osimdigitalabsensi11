@@ -24,6 +24,7 @@
 #include <MFRC522.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+#include <time.h>
 
 #include "config.h"
 
@@ -47,6 +48,7 @@ unsigned long lastHeartbeatMillis = 0;
 
 bool beginServerRequest(HTTPClient &client, const String &url) {
   if (url.startsWith("https://")) {
+    secureClient.stop();
     secureClient.setCACert(SERVER_ROOT_CA);
     secureClient.setTimeout(HTTP_TIMEOUT_MS / 1000);
     return client.begin(secureClient, url);
@@ -104,6 +106,29 @@ void connectWifi() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print("WiFi Connected! IP: ");
     Serial.println(WiFi.localIP());
+    displayLcd("WiFi Terhubung!", "Sinkron Jam...");
+
+    // Sinkronisasi waktu NTP agar validasi sertifikat HTTPS TLS valid
+    Serial.print("Sinkronisasi waktu via NTP...");
+    configTime(7 * 3600, 0, "pool.ntp.org", "time.google.com");
+    time_t now = time(nullptr);
+    int retryTime = 0;
+    while (now < 1700000000 && retryTime < 20) {
+      delay(500);
+      Serial.print(".");
+      now = time(nullptr);
+      retryTime++;
+    }
+    Serial.println();
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+      Serial.printf("Waktu sekarang: %04d-%02d-%02d %02d:%02d:%02d WIB\n",
+                    timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
+                    timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+    } else {
+      Serial.println("Peringatan: NTP timeout, lanjut mencoba...");
+    }
+
     displayLcd("WiFi Terhubung!", WiFi.localIP().toString());
     delay(1500);
     showReadyScreen();

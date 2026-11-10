@@ -38,6 +38,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/v1/iot") ||       // Endpoint ESP32 IoT memiliki otentikasi Device API Key
     pathname === "/api/v1/attendance/scan" ||   // Endpoint pemindaian RFID perangkat scanner
+    pathname === "/api/v1/devices/heartbeat" || // Endpoint heartbeat status koneksi ESP32
     pathname === "/api/health" ||               // Public health check endpoint
     pathname === "/api/auth/setup-superadmin" || // Initial Superadmin onboarding endpoint
     pathname.includes(".")
