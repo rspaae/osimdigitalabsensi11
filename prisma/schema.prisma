@@ -256,6 +256,9 @@ model Attendance {
   status           AttendanceStatus
   method           AttendanceMethod @default(RFID)
   notes            String?
+  scan_count       Int              @default(1)
+  last_scan_at     DateTime         @default(now())
+  auto_upgraded_at DateTime?
   created_at       DateTime         @default(now())
   updated_at       DateTime         @updatedAt
 

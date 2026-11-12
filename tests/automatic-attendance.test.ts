@@ -22,6 +22,10 @@
  * 16. Duplicate scan idempotency for HADIR, TERLAMBAT, DI_LUAR_JADWAL
  * 17. Canonical UID normalization and integration
  * 18. Firmware LCD 16x2 response strings (strict <= 16 characters per line)
+ * 19. Sapa Pagi & Danusan simultan -> terdeteksi via roster tanpa bentrok
+ * 20. Scan ulang di dalam jendela -> DI_LUAR_JADWAL naik ke HADIR + tap bertambah
+ * 21. Scan ulang di luar jendela -> status tetap, jumlah tap bertambah
+ * 22. Status IZIN tidak ditimpa oleh scan ulang
  */
 
 import test from "node:test";
@@ -88,7 +92,7 @@ function simulateAutomaticScan(opts: {
   scanDateWib: Date;
   schedules: SimulatedDutySchedule[];
   substitutions?: SimulatedSubstitution[];
-  existingAttendance?: { id: string; status: AttendanceStatus; scan_time: Date } | null;
+  existingAttendance?: { id: string; status: AttendanceStatus; scan_time: Date; scan_count?: number } | null;
   activeActivities?: SimulatedActivity[];
 }) {
   if (!opts.deviceRegistered || !opts.apiKeyValid) {
@@ -220,16 +224,23 @@ function simulateAutomaticScan(opts: {
 
   const primary = targets[0];
 
-  // Idempotency check
+  // Idempotency check: scan ulang menambah jumlah tap, dan menaikkan
+  // DI_LUAR_JADWAL -> HADIR bila tap baru berada di dalam jendela piket.
   if (opts.existingAttendance) {
+    const upgraded =
+      opts.existingAttendance.status === AttendanceStatus.DI_LUAR_JADWAL &&
+      primary.status === AttendanceStatus.HADIR;
+
     return {
       attendance_id: opts.existingAttendance.id,
       member_name: opts.member.full_name,
-      status: opts.existingAttendance.status,
+      status: upgraded ? AttendanceStatus.HADIR : opts.existingAttendance.status,
       scan_time: opts.existingAttendance.scan_time,
       duty_schedule_id: primary.duty_schedule_id,
       activity_code: primary.activity_code,
       is_duplicate: true,
+      scan_count: (opts.existingAttendance.scan_count ?? 1) + 1,
+      upgraded,
       record_count: targets.length,
     };
   }
@@ -243,6 +254,8 @@ function simulateAutomaticScan(opts: {
     activity_code: primary.activity_code,
     is_substitution: primary.is_substitution,
     is_duplicate: false,
+    scan_count: 1,
+    upgraded: false,
     record_count: targets.length,
   };
 }
@@ -953,4 +966,114 @@ test("Scenario 19: Sapa Pagi & Danusan simultan -> Terdeteksi otomatis via roste
   });
   assert.equal(resOther.status, AttendanceStatus.DI_LUAR_JADWAL);
   assert.equal(resOther.duty_schedule_id, "sched-sapa");
+});
+
+test("Scenario 20: Scan ulang di dalam jendela menaikkan DI_LUAR_JADWAL -> HADIR", () => {
+  const sapaPagi: SimulatedDutySchedule = {
+    id: "sched-sapa",
+    activity_id: "act-sapa",
+    activity_code: "SAPA_PAGI",
+    activity_name: "Sapa Pagi",
+    cycle_week: CycleWeek.WEEK_1,
+    day_of_week: DayOfWeek.MONDAY,
+    start_time_wib: "05:30",
+    cutoff_time_wib: "06:00",
+    is_active: true,
+    roster_member_ids: ["mem-1"],
+  };
+
+  const firstScan = new Date("2026-11-02T10:30:00+07:00");
+
+  const result = simulateAutomaticScan({
+    deviceRegistered: true,
+    deviceActive: true,
+    apiKeyValid: true,
+    member: { id: "mem-1", full_name: "Budi Santoso", status: "ACTIVE" },
+    cycleStartDate: "2026-11-02",
+    scanDateWib: new Date("2026-11-02T05:45:00+07:00"),
+    schedules: [sapaPagi],
+    existingAttendance: {
+      id: "att-existing",
+      status: AttendanceStatus.DI_LUAR_JADWAL,
+      scan_time: firstScan,
+      scan_count: 1,
+    },
+  });
+
+  assert.equal(result.is_duplicate, true);
+  assert.equal(result.upgraded, true);
+  assert.equal(result.status, AttendanceStatus.HADIR);
+  assert.equal(result.scan_count, 2);
+  // Waktu scan pertama tetap dipertahankan sebagai waktu absensi
+  assert.equal(result.scan_time, firstScan);
+});
+
+test("Scenario 21: Scan ulang di luar jendela tetap DI_LUAR_JADWAL dan menambah tap", () => {
+  const sapaPagi: SimulatedDutySchedule = {
+    id: "sched-sapa",
+    activity_id: "act-sapa",
+    activity_code: "SAPA_PAGI",
+    activity_name: "Sapa Pagi",
+    cycle_week: CycleWeek.WEEK_1,
+    day_of_week: DayOfWeek.MONDAY,
+    start_time_wib: "05:30",
+    cutoff_time_wib: "06:00",
+    is_active: true,
+    roster_member_ids: ["mem-1"],
+  };
+
+  const result = simulateAutomaticScan({
+    deviceRegistered: true,
+    deviceActive: true,
+    apiKeyValid: true,
+    member: { id: "mem-1", full_name: "Budi Santoso", status: "ACTIVE" },
+    cycleStartDate: "2026-11-02",
+    scanDateWib: new Date("2026-11-02T23:00:00+07:00"),
+    schedules: [sapaPagi],
+    existingAttendance: {
+      id: "att-existing",
+      status: AttendanceStatus.DI_LUAR_JADWAL,
+      scan_time: new Date("2026-11-02T10:30:00+07:00"),
+      scan_count: 2,
+    },
+  });
+
+  assert.equal(result.status, AttendanceStatus.DI_LUAR_JADWAL);
+  assert.equal(result.upgraded, false);
+  assert.equal(result.scan_count, 3);
+});
+
+test("Scenario 22: Status IZIN tidak ditimpa oleh scan ulang", () => {
+  const sapaPagi: SimulatedDutySchedule = {
+    id: "sched-sapa",
+    activity_id: "act-sapa",
+    activity_code: "SAPA_PAGI",
+    activity_name: "Sapa Pagi",
+    cycle_week: CycleWeek.WEEK_1,
+    day_of_week: DayOfWeek.MONDAY,
+    start_time_wib: "05:30",
+    cutoff_time_wib: "06:00",
+    is_active: true,
+    roster_member_ids: ["mem-1"],
+  };
+
+  const result = simulateAutomaticScan({
+    deviceRegistered: true,
+    deviceActive: true,
+    apiKeyValid: true,
+    member: { id: "mem-1", full_name: "Budi Santoso", status: "ACTIVE" },
+    cycleStartDate: "2026-11-02",
+    scanDateWib: new Date("2026-11-02T05:45:00+07:00"),
+    schedules: [sapaPagi],
+    existingAttendance: {
+      id: "att-existing",
+      status: AttendanceStatus.IZIN,
+      scan_time: new Date("2026-11-02T05:00:00+07:00"),
+      scan_count: 1,
+    },
+  });
+
+  assert.equal(result.status, AttendanceStatus.IZIN);
+  assert.equal(result.upgraded, false);
+  assert.equal(result.scan_count, 2);
 });

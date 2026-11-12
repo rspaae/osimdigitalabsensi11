@@ -75,6 +75,8 @@ Records attendance from an ESP32 RFID scanner. This endpoint is **public** (bypa
     "duty_schedule_id": "uuid",
     "is_substitution": false,
     "is_duplicate": false,
+    "scan_count": 1,
+    "upgraded": false,
     "activity_names": ["Sapa Pagi"]
   }
 }
@@ -87,7 +89,9 @@ Records attendance from an ESP32 RFID scanner. This endpoint is **public** (bypa
 - Scan di luar jendela tersebut (sebelum mulai, setelah cutoff, atau hari tanpa jadwal) **tetap dicatat** sebagai `DI_LUAR_JADWAL`. Scan tidak pernah ditolak hanya karena waktu.
 - Bila hari itu tidak punya jadwal piket sama sekali, record ditempel ke kegiatan aktif pertama (`SAPA_PAGI`) dengan sesi rentang penuh hari.
 - `ActivitySchedule` harian dibuat otomatis berstatus `OPEN` pada scan pertama; tutup sesi + rekonsiliasi ALPA dijalankan terpisah oleh pengurus.
-- Scan berulang pada sesi yang sama mengembalikan record awal secara idempoten (`is_duplicate: true`, HTTP `200`), bukan `409`.
+- Scan berulang pada sesi yang sama **tidak** membuat record baru (`is_duplicate: true`, HTTP `200`, bukan `409`). Record yang sama diperbarui: `scan_count` bertambah dan `last_scan_at` diperbarui, sehingga tap berulang terlihat di rekap.
+- Bila status masih `DI_LUAR_JADWAL` dan tap ulang terjadi **di dalam** `start_time`..`cutoff_time`, status dinaikkan otomatis menjadi `HADIR` dan `auto_upgraded_at` diisi. Status `IZIN`, `SAKIT`, `ALPA`, atau `HADIR` tidak pernah ditimpa oleh scan.
+- `scan_time` selalu menyimpan waktu tap **pertama**; gunakan `last_scan_at` untuk tap terakhir.
 
 **Error Responses:**
 

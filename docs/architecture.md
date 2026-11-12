@@ -534,6 +534,7 @@ c:\Users\rafar\OneDrive\Dokumen\osis-mpk-attendance\
 > **Catatan implementasi alur otomatis (berlaku saat ini):**
 > - Sesi `ActivitySchedule` harian dibuat otomatis pada scan pertama dengan status `OPEN`, sehingga pengurus tidak perlu membuka sesi manual sebelum scan.
 > - Scan di luar jam piket **tidak ditolak**. Bila waktu scan berada di dalam `start_time`..`cutoff_time_wib` dan anggota ada di roster/substitusi, statusnya `HADIR`; selain itu tetap dicatat sebagai `DI_LUAR_JADWAL`.
+> - Scan ulang pada sesi yang sama tidak membuat record baru: `scan_count` bertambah dan `last_scan_at` diperbarui. Status `DI_LUAR_JADWAL` dinaikkan otomatis ke `HADIR` bila tap ulang terjadi di dalam jendela piket (`auto_upgraded_at`); status hasil input pengurus tidak ditimpa.
 > - Hari tanpa jadwal piket (mis. Sabtu/Minggu): record ditempel ke kegiatan aktif pertama (`SAPA_PAGI`) dengan sesi rentang penuh hari.
 > - Status `TERLAMBAT` tidak dihasilkan oleh alur otomatis ini; penentuan ALPA tetap dilakukan pasca sesi ditutup.
 

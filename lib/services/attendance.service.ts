@@ -46,7 +46,9 @@ function addMinutesToTime(timeStr: string, minutesToAdd: number): string {
  *   DI_LUAR_JADWAL (scan tidak pernah ditolak hanya karena waktu).
  * - Hanya perangkat tidak sah, kartu tidak dikenal, atau siklus belum diatur
  *   yang membuat scan ditolak.
- * - Idempoten: jika sudah scan, kembalikan record awal dengan is_duplicate: true.
+ * - Idempoten: scan ulang tidak membuat record baru, tetapi menambah `scan_count`,
+ *   memperbarui `last_scan_at`, dan menaikkan status DI_LUAR_JADWAL -> HADIR bila
+ *   tap baru terjadi di dalam jendela waktu piket.
  *
  * @param deviceCode - Kode perangkat dari body request
  * @param rawApiKey  - Raw API key dari header Authorization: Bearer <key>
@@ -257,8 +259,52 @@ export async function recordRfidAttendance(
     activity_name: string;
     is_substitution: boolean;
     is_duplicate: boolean;
+    scan_count: number;
+    upgraded: boolean;
   }
   const processedResults: ProcessedAttendanceResult[] = [];
+
+  /**
+   * Scan ulang pada sesi yang sama:
+   * - selalu menambah scan_count dan memperbarui last_scan_at (jejak tap berulang),
+   * - menaikkan DI_LUAR_JADWAL -> HADIR bila tap baru terjadi di dalam jendela piket,
+   * - tidak pernah menurunkan status atau menimpa IZIN/SAKIT/ALPA yang diinput pengurus.
+   */
+  const recordRescan = async (
+    existing: {
+      id: string;
+      status: AttendanceStatus;
+      scan_time: Date;
+      duty_schedule_id: string | null;
+      is_substitution: boolean;
+    },
+    evaluatedStatus: AttendanceStatus
+  ) => {
+    const shouldUpgrade =
+      existing.status === AttendanceStatus.DI_LUAR_JADWAL &&
+      evaluatedStatus === AttendanceStatus.HADIR;
+
+    const updated = await prisma.attendance.update({
+      where: { id: existing.id },
+      data: {
+        scan_count: { increment: 1 },
+        last_scan_at: now,
+        ...(shouldUpgrade
+          ? { status: AttendanceStatus.HADIR, auto_upgraded_at: now }
+          : {}),
+      },
+      select: {
+        id: true,
+        status: true,
+        scan_time: true,
+        duty_schedule_id: true,
+        is_substitution: true,
+        scan_count: true,
+      },
+    });
+
+    return { updated, upgraded: shouldUpgrade };
+  };
 
   for (const item of sessionsToRecord) {
     const { activity, dutyScheduleId, isSubstitution, status } = item;
@@ -309,15 +355,21 @@ export async function recordRfidAttendance(
     });
 
     if (existingAttendance) {
+      const { updated, upgraded } = await recordRescan(
+        existingAttendance,
+        status
+      );
       processedResults.push({
-        id: existingAttendance.id,
-        status: existingAttendance.status,
-        scan_time: existingAttendance.scan_time,
+        id: updated.id,
+        status: updated.status,
+        scan_time: updated.scan_time,
         schedule_id: activitySchedule.id,
-        duty_schedule_id: existingAttendance.duty_schedule_id ?? dutyScheduleId,
+        duty_schedule_id: updated.duty_schedule_id ?? dutyScheduleId,
         activity_name: activity.name,
-        is_substitution: existingAttendance.is_substitution,
+        is_substitution: updated.is_substitution,
         is_duplicate: true,
+        scan_count: updated.scan_count,
+        upgraded,
       });
       continue;
     }
@@ -345,6 +397,8 @@ export async function recordRfidAttendance(
         activity_name: activity.name,
         is_substitution: isSubstitution,
         is_duplicate: false,
+        scan_count: attendance.scan_count,
+        upgraded: false,
       });
     } catch (error) {
       if (
@@ -364,15 +418,18 @@ export async function recordRfidAttendance(
           throw new ConflictError("Konflik data absensi yang tidak terduga.");
         }
 
+        const { updated, upgraded } = await recordRescan(existing, status);
         processedResults.push({
-          id: existing.id,
-          status: existing.status,
-          scan_time: existing.scan_time,
+          id: updated.id,
+          status: updated.status,
+          scan_time: updated.scan_time,
           schedule_id: activitySchedule.id,
-          duty_schedule_id: existing.duty_schedule_id ?? dutyScheduleId,
+          duty_schedule_id: updated.duty_schedule_id ?? dutyScheduleId,
           activity_name: activity.name,
-          is_substitution: existing.is_substitution,
+          is_substitution: updated.is_substitution,
           is_duplicate: true,
+          scan_count: updated.scan_count,
+          upgraded,
         });
       } else {
         throw error;
@@ -393,6 +450,8 @@ export async function recordRfidAttendance(
     duty_schedule_id: primaryResult.duty_schedule_id,
     is_substitution: primaryResult.is_substitution,
     is_duplicate: primaryResult.is_duplicate,
+    scan_count: primaryResult.scan_count,
+    upgraded: primaryResult.upgraded,
     activity_names: processedResults.map((r) => r.activity_name),
   };
 }
