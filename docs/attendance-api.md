@@ -71,15 +71,23 @@ Records attendance from an ESP32 RFID scanner. This endpoint is **public** (bypa
     "member_id": "uuid",
     "status": "HADIR",
     "scan_time": "2026-11-08T23:30:00.000Z",
-    "schedule_id": "uuid"
+    "schedule_id": "uuid",
+    "duty_schedule_id": "uuid",
+    "is_substitution": false,
+    "is_duplicate": false,
+    "activity_names": ["Sapa Pagi"]
   }
 }
 ```
 
 **Notes:**
-- Server time determines `HADIR` / `TERLAMBAT` — ESP32 timestamps are **never trusted**.
-- If the member already has a record for this session (duplicate scan), the existing record is returned idempotently with `200` (not `409`).
-- Status = `HADIR` if `scan_time ≤ late_threshold`, else `TERLAMBAT`.
+- Waktu server (WIB) menentukan status — timestamp ESP32 **tidak pernah** dipercaya.
+- Jadwal piket dipilih dari siklus 14 hari (`WEEK_1`/`WEEK_2`) + hari + jam saat ini.
+- `HADIR` hanya jika anggota ada di roster/substitusi **dan** scan berada di dalam `start_time`..`cutoff_time_wib`.
+- Scan di luar jendela tersebut (sebelum mulai, setelah cutoff, atau hari tanpa jadwal) **tetap dicatat** sebagai `DI_LUAR_JADWAL`. Scan tidak pernah ditolak hanya karena waktu.
+- Bila hari itu tidak punya jadwal piket sama sekali, record ditempel ke kegiatan aktif pertama (`SAPA_PAGI`) dengan sesi rentang penuh hari.
+- `ActivitySchedule` harian dibuat otomatis berstatus `OPEN` pada scan pertama; tutup sesi + rekonsiliasi ALPA dijalankan terpisah oleh pengurus.
+- Scan berulang pada sesi yang sama mengembalikan record awal secara idempoten (`is_duplicate: true`, HTTP `200`), bukan `409`.
 
 **Error Responses:**
 
@@ -88,7 +96,7 @@ Records attendance from an ESP32 RFID scanner. This endpoint is **public** (bypa
 | `400` | Missing/invalid `device_code` or `rfid_uid` |
 | `401` | Missing `Authorization` header, or device not found / inactive / wrong API key |
 | `404` | RFID UID not registered, or member is INACTIVE |
-| `422` | No OPEN session found for today |
+| `422` | `CYCLE_NOT_CONFIGURED`, `NO_ACTIVE_ACTIVITY`, atau `SCHEDULE_AMBIGUOUS` |
 
 ---
 

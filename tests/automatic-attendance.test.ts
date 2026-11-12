@@ -9,8 +9,9 @@
  * 4. Unconfigured cycle start date rejection (CYCLE_NOT_CONFIGURED)
  * 5. Scan right before cutoff -> HADIR
  * 6. Scan exactly at cutoff -> HADIR
- * 7. Scan after cutoff -> REJECTED (CUTOFF_TIME_EXCEEDED, no record created)
- * 8. No matching schedule -> REJECTED (SCHEDULE_NO_MATCH)
+ * 7. Scan after cutoff -> tetap dicatat sebagai DI_LUAR_JADWAL (tidak ditolak)
+ * 8. Tidak ada jadwal aktif pada jam scan -> tetap dicatat sebagai DI_LUAR_JADWAL
+ * 8b. Hari tanpa jadwal piket -> dicatat pada kegiatan aktif pertama
  * 9. Multiple ambiguous matching schedules -> REJECTED (SCHEDULE_AMBIGUOUS)
  * 10. Member registered in roster -> HADIR
  * 11. Member not in roster -> DI_LUAR_JADWAL
@@ -72,6 +73,12 @@ function addMinutes(timeStr: string, minutes: number): string {
   return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
 }
 
+interface SimulatedActivity {
+  id: string;
+  code: string;
+  name: string;
+}
+
 function simulateAutomaticScan(opts: {
   deviceRegistered: boolean;
   deviceActive: boolean;
@@ -82,6 +89,7 @@ function simulateAutomaticScan(opts: {
   schedules: SimulatedDutySchedule[];
   substitutions?: SimulatedSubstitution[];
   existingAttendance?: { id: string; status: AttendanceStatus; scan_time: Date } | null;
+  activeActivities?: SimulatedActivity[];
 }) {
   if (!opts.deviceRegistered || !opts.apiKeyValid) {
     throw new Error("DEVICE_AUTH_FAILED");
@@ -103,76 +111,114 @@ function simulateAutomaticScan(opts: {
   const { dateStr, timeStr, dayOfWeek } = getWibDateComponents(opts.scanDateWib);
   const { cycleWeek } = calculateCycleWeek(opts.scanDateWib, opts.cycleStartDate);
 
-  // Filter matching schedules for today and current time
+  // Seluruh jadwal piket aktif hari ini (tanpa melihat jam scan)
   const todaySchedules = opts.schedules.filter(
     (s) => s.is_active && s.cycle_week === cycleWeek && s.day_of_week === dayOfWeek
   );
 
-  const matchingSchedules = todaySchedules.filter((s) => {
+  // Jadwal yang sedang berada di dalam jendela sesi (start s.d. cutoff + 30 menit)
+  const sessionWindowSchedules = todaySchedules.filter((s) => {
     const sessionEnd = addMinutes(s.cutoff_time_wib, 30);
     return timeStr >= s.start_time_wib && timeStr <= sessionEnd;
   });
 
-  if (matchingSchedules.length === 0) {
-    throw new BusinessRuleError("Tidak ada jadwal piket yang sedang berlangsung saat ini.", "SCHEDULE_NO_MATCH");
-  }
-
-  // Roster & Substitution check pada semua matchingSchedules
+  // Substitusi resmi berlaku sepanjang hari
   const subs = opts.substitutions ?? [];
   const activeSubs = subs.filter(
     (sub) =>
       sub.duty_date_str === dateStr &&
       sub.substitute_member_id === opts.member!.id &&
       sub.status === SubstitutionStatus.APPROVED &&
-      matchingSchedules.some((s) => s.id === sub.duty_schedule_id)
+      todaySchedules.some((s) => s.id === sub.duty_schedule_id)
   );
   const activeSubScheduleIds = new Set(activeSubs.map((s) => s.duty_schedule_id));
 
-  const rosteredSchedules = matchingSchedules.filter(
+  const rosteredToday = todaySchedules.filter(
     (s) =>
       s.roster_member_ids.includes(opts.member!.id) ||
       activeSubScheduleIds.has(s.id)
   );
 
-  let duty: SimulatedDutySchedule;
-  let status: AttendanceStatus;
-  let isSubstitution = false;
+  // HADIR hanya bila scan berada di dalam jendela start_time..cutoff_time
+  const isWithinOnTimeWindow = (s: SimulatedDutySchedule) =>
+    timeStr >= s.start_time_wib && timeStr <= s.cutoff_time_wib;
 
-  if (rosteredSchedules.length > 0) {
-    // Jika ada >1 jadwal untuk kegiatan yang sama pada roster member
-    const activityCodes = rosteredSchedules.map((s) => s.activity_code);
+  interface SimulatedTarget {
+    activity_code: string;
+    duty_schedule_id: string | null;
+    status: AttendanceStatus;
+    is_substitution: boolean;
+  }
+
+  let targets: SimulatedTarget[] = [];
+
+  if (rosteredToday.length > 0) {
+    // Validasi ambiguitas jika ada lebih dari 1 jadwal untuk AKTIVITAS YANG SAMA
+    const activityCodes = rosteredToday.map((s) => s.activity_code);
     if (new Set(activityCodes).size !== activityCodes.length) {
-      throw new BusinessRuleError("Terdapat lebih dari satu jadwal piket aktif yang cocok untuk waktu saat ini.", "SCHEDULE_AMBIGUOUS");
-    }
-    // Jika ada bentrok antar sub-jadwal Sapa Pagi (misal Timur vs Barat)
-    const sapaVariants = matchingSchedules.filter((s) => s.activity_code.startsWith("SAPA_PAGI"));
-    if (sapaVariants.length > 1) {
-      throw new BusinessRuleError("Terdapat lebih dari satu jadwal piket aktif yang cocok untuk waktu saat ini.", "SCHEDULE_AMBIGUOUS");
+      throw new BusinessRuleError(
+        "Terdapat jadwal ganda yang bentrok untuk kegiatan yang sama pada hari ini.",
+        "SCHEDULE_AMBIGUOUS"
+      );
     }
 
-    duty = rosteredSchedules[0];
-    status = AttendanceStatus.HADIR;
-    isSubstitution = activeSubScheduleIds.has(duty.id);
+    targets = rosteredToday.map((s) => ({
+      activity_code: s.activity_code,
+      duty_schedule_id: s.id,
+      status: isWithinOnTimeWindow(s)
+        ? AttendanceStatus.HADIR
+        : AttendanceStatus.DI_LUAR_JADWAL,
+      is_substitution: activeSubScheduleIds.has(s.id),
+    }));
   } else {
-    // Non-rostered member
-    const sapaVariants = matchingSchedules.filter((s) => s.activity_code.startsWith("SAPA_PAGI"));
-    if (sapaVariants.length > 1) {
-      throw new BusinessRuleError("Terdapat lebih dari satu jadwal piket aktif yang cocok untuk waktu saat ini.", "SCHEDULE_AMBIGUOUS");
+    const pick = (list: SimulatedDutySchedule[]) =>
+      list.find((s) => s.activity_code === "SAPA_PAGI") ?? list[0] ?? null;
+
+    const target = pick(sessionWindowSchedules) ?? pick(todaySchedules);
+
+    if (target) {
+      targets = [
+        {
+          activity_code: target.activity_code,
+          duty_schedule_id: target.id,
+          status: AttendanceStatus.DI_LUAR_JADWAL,
+          is_substitution: false,
+        },
+      ];
+    } else {
+      const activities = opts.activeActivities ?? [
+        { id: "act-sapa", code: "SAPA_PAGI", name: "Sapa Pagi" },
+      ];
+
+      if (activities.length === 0) {
+        throw new BusinessRuleError(
+          "Belum ada kegiatan aktif yang dapat menampung absensi.",
+          "NO_ACTIVE_ACTIVITY"
+        );
+      }
+
+      const fallback =
+        activities.find((a) => a.code === "SAPA_PAGI") ?? activities[0];
+
+      targets = [
+        {
+          activity_code: fallback.code,
+          duty_schedule_id: null,
+          status: AttendanceStatus.DI_LUAR_JADWAL,
+          is_substitution: false,
+        },
+      ];
     }
-
-    const sapaPagi = matchingSchedules.find((s) => s.activity_code === "SAPA_PAGI");
-    duty = sapaPagi ?? matchingSchedules[0];
-
-    status = AttendanceStatus.DI_LUAR_JADWAL;
   }
 
-  // Cutoff check
-  if (timeStr > duty.cutoff_time_wib) {
-    throw new BusinessRuleError(
-      `Batas waktu absensi (${duty.cutoff_time_wib} WIB) telah berakhir. Absensi ditolak.`,
-      "CUTOFF_TIME_EXCEEDED"
-    );
-  }
+  // Status HADIR ditampilkan lebih dulu bila ada beberapa sesi
+  targets.sort(
+    (a, b) =>
+      Number(b.status === AttendanceStatus.HADIR) -
+      Number(a.status === AttendanceStatus.HADIR)
+  );
+
+  const primary = targets[0];
 
   // Idempotency check
   if (opts.existingAttendance) {
@@ -181,19 +227,23 @@ function simulateAutomaticScan(opts: {
       member_name: opts.member.full_name,
       status: opts.existingAttendance.status,
       scan_time: opts.existingAttendance.scan_time,
-      duty_schedule_id: duty.id,
+      duty_schedule_id: primary.duty_schedule_id,
+      activity_code: primary.activity_code,
       is_duplicate: true,
+      record_count: targets.length,
     };
   }
 
   return {
     attendance_id: "att-new-uuid",
     member_name: opts.member.full_name,
-    status,
+    status: primary.status,
     scan_time: opts.scanDateWib,
-    duty_schedule_id: duty.id,
-    is_substitution: isSubstitution,
+    duty_schedule_id: primary.duty_schedule_id,
+    activity_code: primary.activity_code,
+    is_substitution: primary.is_substitution,
     is_duplicate: false,
+    record_count: targets.length,
   };
 }
 
@@ -376,7 +426,7 @@ test("Scenario 6: Scan exactly at cutoff -> HADIR", () => {
   assert.equal(result.is_duplicate, false);
 });
 
-test("Scenario 7: Scan after cutoff -> REJECTED (CUTOFF_TIME_EXCEEDED, no record created)", () => {
+test("Scenario 7: Scan setelah cutoff -> tercatat DI_LUAR_JADWAL (tidak ditolak)", () => {
   const sapaPagi: SimulatedDutySchedule = {
     id: "sched-sapa",
     activity_id: "act-sapa",
@@ -390,23 +440,23 @@ test("Scenario 7: Scan after cutoff -> REJECTED (CUTOFF_TIME_EXCEEDED, no record
     roster_member_ids: ["mem-1"],
   };
 
-  // 06:01:00 WIB (1 minute after 06:00 cutoff)
-  assert.throws(
-    () =>
-      simulateAutomaticScan({
-        deviceRegistered: true,
-        deviceActive: true,
-        apiKeyValid: true,
-        member: { id: "mem-1", full_name: "Budi Santoso", status: "ACTIVE" },
-        cycleStartDate: "2026-11-02",
-        scanDateWib: new Date("2026-11-02T06:01:00+07:00"),
-        schedules: [sapaPagi],
-      }),
-    (err: unknown) => err instanceof BusinessRuleError && err.code === "CUTOFF_TIME_EXCEEDED"
-  );
+  // 06:01:00 WIB (1 menit setelah cutoff 06:00)
+  const result = simulateAutomaticScan({
+    deviceRegistered: true,
+    deviceActive: true,
+    apiKeyValid: true,
+    member: { id: "mem-1", full_name: "Budi Santoso", status: "ACTIVE" },
+    cycleStartDate: "2026-11-02",
+    scanDateWib: new Date("2026-11-02T06:01:00+07:00"),
+    schedules: [sapaPagi],
+  });
+
+  assert.equal(result.status, AttendanceStatus.DI_LUAR_JADWAL);
+  assert.equal(result.is_duplicate, false);
+  assert.equal(result.duty_schedule_id, "sched-sapa");
 });
 
-test("Scenario 8: No matching schedule -> REJECTED (SCHEDULE_NO_MATCH)", () => {
+test("Scenario 8: Tidak ada jadwal aktif pada jam scan -> tetap tercatat DI_LUAR_JADWAL", () => {
   const sapaPagi: SimulatedDutySchedule = {
     id: "sched-sapa",
     activity_id: "act-sapa",
@@ -420,20 +470,36 @@ test("Scenario 8: No matching schedule -> REJECTED (SCHEDULE_NO_MATCH)", () => {
     roster_member_ids: ["mem-1"],
   };
 
-  // Scan at 10:30 WIB (way outside schedule session)
-  assert.throws(
-    () =>
-      simulateAutomaticScan({
-        deviceRegistered: true,
-        deviceActive: true,
-        apiKeyValid: true,
-        member: { id: "mem-1", full_name: "Budi Santoso", status: "ACTIVE" },
-        cycleStartDate: "2026-11-02",
-        scanDateWib: new Date("2026-11-02T10:30:00+07:00"),
-        schedules: [sapaPagi],
-      }),
-    (err: unknown) => err instanceof BusinessRuleError && err.code === "SCHEDULE_NO_MATCH"
-  );
+  // Scan pukul 10:30 WIB (jauh di luar sesi piket)
+  const result = simulateAutomaticScan({
+    deviceRegistered: true,
+    deviceActive: true,
+    apiKeyValid: true,
+    member: { id: "mem-1", full_name: "Budi Santoso", status: "ACTIVE" },
+    cycleStartDate: "2026-11-02",
+    scanDateWib: new Date("2026-11-02T10:30:00+07:00"),
+    schedules: [sapaPagi],
+  });
+
+  assert.equal(result.status, AttendanceStatus.DI_LUAR_JADWAL);
+  assert.equal(result.duty_schedule_id, "sched-sapa");
+});
+
+test("Scenario 8b: Hari tanpa jadwal piket -> tercatat pada kegiatan aktif pertama", () => {
+  // Sabtu, 7 November 2026 — tidak ada jadwal piket sama sekali
+  const result = simulateAutomaticScan({
+    deviceRegistered: true,
+    deviceActive: true,
+    apiKeyValid: true,
+    member: { id: "mem-1", full_name: "Budi Santoso", status: "ACTIVE" },
+    cycleStartDate: "2026-11-02",
+    scanDateWib: new Date("2026-11-07T09:00:00+07:00"),
+    schedules: [],
+  });
+
+  assert.equal(result.status, AttendanceStatus.DI_LUAR_JADWAL);
+  assert.equal(result.duty_schedule_id, null);
+  assert.equal(result.activity_code, "SAPA_PAGI");
 });
 
 test("Scenario 9: Multiple ambiguous matching schedules -> REJECTED (SCHEDULE_AMBIGUOUS)", () => {
@@ -453,14 +519,15 @@ test("Scenario 9: Multiple ambiguous matching schedules -> REJECTED (SCHEDULE_AM
   const scheduleB: SimulatedDutySchedule = {
     id: "sched-b",
     activity_id: "act-b",
-    activity_code: "SAPA_PAGI_TIMUR",
+    activity_code: "SAPA_PAGI",
     activity_name: "Sapa Pagi Pintu Timur",
     cycle_week: CycleWeek.WEEK_1,
     day_of_week: DayOfWeek.MONDAY,
     start_time_wib: "05:30",
     cutoff_time_wib: "06:00",
     is_active: true,
-    roster_member_ids: ["mem-2"],
+    // Data legacy yang melanggar aturan satu-jadwal-per-kegiatan-per-hari
+    roster_member_ids: ["mem-1"],
   };
 
   // Overlapping schedules at 05:45 WIB
@@ -706,7 +773,7 @@ test("Scenario 15: RBAC: SUPERADMIN full access across all duties & cycle settin
   );
 });
 
-test("Scenario 16: Duplicate scan idempotency for HADIR, TERLAMBAT, DI_LUAR_JADWAL", () => {
+test("Scenario 16: Duplicate scan idempotency for HADIR and DI_LUAR_JADWAL", () => {
   const sapaPagi: SimulatedDutySchedule = {
     id: "sched-sapa",
     activity_id: "act-sapa",

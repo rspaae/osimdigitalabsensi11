@@ -530,6 +530,13 @@ c:\Users\rafar\OneDrive\Dokumen\osis-mpk-attendance\
 > 6. **Input Presensi Izin & Sakit:** Status `IZIN` dan `SAKIT` diinput secara manual oleh pengurus ke dalam sistem setelah surat izin/dispensasi diverifikasi secara fisik.
 > 7. **Koreksi Berbasis Audit:** Setiap modifikasi status kehadiran wajib menyertakan alasan koreksi dan terekam dalam audit log.
 
+> [!NOTE]
+> **Catatan implementasi alur otomatis (berlaku saat ini):**
+> - Sesi `ActivitySchedule` harian dibuat otomatis pada scan pertama dengan status `OPEN`, sehingga pengurus tidak perlu membuka sesi manual sebelum scan.
+> - Scan di luar jam piket **tidak ditolak**. Bila waktu scan berada di dalam `start_time`..`cutoff_time_wib` dan anggota ada di roster/substitusi, statusnya `HADIR`; selain itu tetap dicatat sebagai `DI_LUAR_JADWAL`.
+> - Hari tanpa jadwal piket (mis. Sabtu/Minggu): record ditempel ke kegiatan aktif pertama (`SAPA_PAGI`) dengan sesi rentang penuh hari.
+> - Status `TERLAMBAT` tidak dihasilkan oleh alur otomatis ini; penentuan ALPA tetap dilakukan pasca sesi ditutup.
+
 ---
 
 ## 11. Device Authentication Policy

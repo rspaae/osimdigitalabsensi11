@@ -41,10 +41,11 @@ function addMinutesToTime(timeStr: string, minutesToAdd: number): string {
  * Waktu server Asia/Jakarta digunakan — timestamp dari ESP32 TIDAK dipercaya.
  * Tanpa perlu open/close sesi manual.
  * Menggunakan evaluasi siklus 14 hari (WEEK_1 & WEEK_2) dan cutoff piket:
- * - Sapa Pagi: cutoff 06:00 WIB
- * - Danusan: cutoff 06:10 WIB
- * - On/before cutoff: HADIR (roster/substitusi) atau DI_LUAR_JADWAL (non-roster)
- * - Melebihi cutoff: CUTOFF_TIME_EXCEEDED (tidak ada record dibuat, tidak ada TERLAMBAT)
+ * - Di dalam jendela start_time..cutoff: HADIR (roster/substitusi).
+ * - Di luar jadwal, lewat cutoff, atau hari tanpa jadwal: tetap DICATAT sebagai
+ *   DI_LUAR_JADWAL (scan tidak pernah ditolak hanya karena waktu).
+ * - Hanya perangkat tidak sah, kartu tidak dikenal, atau siklus belum diatur
+ *   yang membuat scan ditolak.
  * - Idempoten: jika sudah scan, kembalikan record awal dengan is_duplicate: true.
  *
  * @param deviceCode - Kode perangkat dari body request
@@ -115,28 +116,22 @@ export async function recordRfidAttendance(
     },
   });
 
-  // Tentukan jadwal yang sedang berada dalam sesi (dimulai dari start_time hingga grace period 30 menit setelah cutoff)
-  const matchingSchedules = todayDutySchedules.filter((schedule) => {
+  // Jendela sesi normal: start_time hingga grace period 30 menit setelah cutoff.
+  // Jadwal di luar jendela ini tetap dapat menerima scan (dicatat sebagai DI_LUAR_JADWAL).
+  const sessionWindowSchedules = todayDutySchedules.filter((schedule) => {
     const sessionEndWib = addMinutesToTime(schedule.cutoff_time_wib, 30);
     return timeStr >= schedule.start_time_wib && timeStr <= sessionEndWib;
   });
 
-  if (matchingSchedules.length === 0) {
-    throw new BusinessRuleError(
-      "Tidak ada jadwal piket yang sedang berlangsung saat ini.",
-      "SCHEDULE_NO_MATCH"
-    );
-  }
-
   const todayUtcMidnight = parseDateOnlyToUtc(dateStr);
 
-  // Ambil substitusi yang disetujui untuk member hari ini pada jadwal yang sedang aktif
+  // Ambil substitusi yang disetujui untuk member hari ini (berlaku sepanjang hari)
   const activeSubs = await prisma.dutySubstitution.findMany({
     where: {
       duty_date: todayUtcMidnight,
       substitute_member_id: member.id,
       status: SubstitutionStatus.APPROVED,
-      duty_schedule_id: { in: matchingSchedules.map((s) => s.id) },
+      duty_schedule_id: { in: todayDutySchedules.map((s) => s.id) },
     },
   });
   const activeSubScheduleIds = new Set(
@@ -144,115 +139,156 @@ export async function recordRfidAttendance(
   );
 
   // Cari jadwal di mana anggota terjadwal (melalui roster ATAU substitusi resmi)
-  const rosteredSchedules = matchingSchedules.filter(
+  const rosteredToday = todayDutySchedules.filter(
     (s) =>
       s.roster_members.some((r) => r.member_id === member.id) ||
       activeSubScheduleIds.has(s.id)
   );
 
-  // Tentukan jadwal target yang akan diproses absensinya
-  interface TargetDutyScheduleItem {
-    dutySchedule: (typeof matchingSchedules)[0];
+  // Target sesi yang akan menampung record absensi
+  interface SessionTarget {
+    activity: { id: string; name: string; code: string };
+    dutyScheduleId: string | null;
+    startTimeWib: string | null;
+    cutoffTimeWib: string | null;
     isSubstitution: boolean;
     status: AttendanceStatus;
   }
-  let schedulesToRecord: TargetDutyScheduleItem[] = [];
 
-  if (rosteredSchedules.length > 0) {
+  // HADIR hanya bila scan berada di dalam jendela start_time..cutoff_time.
+  const isWithinOnTimeWindow = (schedule: {
+    start_time_wib: string;
+    cutoff_time_wib: string;
+  }) =>
+    timeStr >= schedule.start_time_wib && timeStr <= schedule.cutoff_time_wib;
+
+  let sessionsToRecord: SessionTarget[] = [];
+
+  if (rosteredToday.length > 0) {
     // Validasi ambiguitas jika ada lebih dari 1 jadwal untuk AKTIVITAS YANG SAMA
-    const activityCodes = rosteredSchedules.map((s) => s.activity.code);
+    const activityCodes = rosteredToday.map((s) => s.activity.code);
     if (new Set(activityCodes).size !== activityCodes.length) {
       throw new BusinessRuleError(
-        "Terdapat jadwal ganda yang bentrok untuk kegiatan yang sama pada waktu ini.",
+        "Terdapat jadwal ganda yang bentrok untuk kegiatan yang sama pada hari ini.",
         "SCHEDULE_AMBIGUOUS"
       );
     }
 
-    // Anggota bertugas di satu atau lebih kegiatan simultan (misal Sapa Pagi dan/atau Danusan)
-    schedulesToRecord = rosteredSchedules.map((dutySchedule) => ({
-      dutySchedule,
+    // Anggota bertugas hari ini: tetap dicatat walau scan di luar jendela waktu,
+    // dengan status DI_LUAR_JADWAL agar tidak dihitung hadir.
+    sessionsToRecord = rosteredToday.map((dutySchedule) => ({
+      activity: dutySchedule.activity,
+      dutyScheduleId: dutySchedule.id,
+      startTimeWib: dutySchedule.start_time_wib,
+      cutoffTimeWib: dutySchedule.cutoff_time_wib,
       isSubstitution: activeSubScheduleIds.has(dutySchedule.id),
-      status: AttendanceStatus.HADIR,
+      status: isWithinOnTimeWindow(dutySchedule)
+        ? AttendanceStatus.HADIR
+        : AttendanceStatus.DI_LUAR_JADWAL,
     }));
   } else {
-    // Anggota TIDAK terdaftar di roster kegiatan manapun hari ini -> DI_LUAR_JADWAL
-    // Pilih jadwal utama (prioritas SAPA_PAGI jika ada, selain itu jadwal pertama)
-    const sapaPagiSchedule = matchingSchedules.find(
-      (s) => s.activity.code === "SAPA_PAGI"
-    );
-    const targetDutySchedule = sapaPagiSchedule ?? matchingSchedules[0];
+    // Anggota tidak bertugas hari ini. Pilih penampung dengan urutan prioritas:
+    // 1) jadwal yang sedang berlangsung, 2) jadwal piket hari ini,
+    // 3) kegiatan aktif pertama (mis. Sabtu/Minggu tanpa jadwal piket).
+    const pickSchedule = <T extends { activity: { code: string } }>(
+      list: T[]
+    ): T | null =>
+      list.find((s) => s.activity.code === "SAPA_PAGI") ?? list[0] ?? null;
 
-    // Jika ada beberapa jadwal yang cocok untuk kegiatan yang sama tanpa pembeda roster:
-    const sameActivitySchedules = matchingSchedules.filter(
-      (s) => s.activity.code === targetDutySchedule.activity.code
-    );
-    if (sameActivitySchedules.length > 1) {
-      throw new BusinessRuleError(
-        "Terdapat lebih dari satu jadwal piket aktif yang ambigu untuk waktu saat ini.",
-        "SCHEDULE_AMBIGUOUS"
-      );
+    const targetSchedule =
+      pickSchedule(sessionWindowSchedules) ?? pickSchedule(todayDutySchedules);
+
+    if (targetSchedule) {
+      sessionsToRecord = [
+        {
+          activity: targetSchedule.activity,
+          dutyScheduleId: targetSchedule.id,
+          startTimeWib: targetSchedule.start_time_wib,
+          cutoffTimeWib: targetSchedule.cutoff_time_wib,
+          isSubstitution: false,
+          status: AttendanceStatus.DI_LUAR_JADWAL,
+        },
+      ];
+    } else {
+      const fallbackActivity =
+        (await prisma.activity.findFirst({
+          where: { is_active: true, code: "SAPA_PAGI" },
+        })) ??
+        (await prisma.activity.findFirst({
+          where: { is_active: true },
+          orderBy: { code: "asc" },
+        }));
+
+      if (!fallbackActivity) {
+        throw new BusinessRuleError(
+          "Belum ada kegiatan aktif yang dapat menampung absensi. Hubungi Superadmin.",
+          "NO_ACTIVE_ACTIVITY"
+        );
+      }
+
+      sessionsToRecord = [
+        {
+          activity: fallbackActivity,
+          dutyScheduleId: null,
+          startTimeWib: null,
+          cutoffTimeWib: null,
+          isSubstitution: false,
+          status: AttendanceStatus.DI_LUAR_JADWAL,
+        },
+      ];
     }
-
-    schedulesToRecord = [
-      {
-        dutySchedule: targetDutySchedule,
-        isSubstitution: false,
-        status: AttendanceStatus.DI_LUAR_JADWAL,
-      },
-    ];
   }
 
-  // 6. Evaluasi Batas Waktu (Cutoff Time):
-  // Jika scan melewati cutoff_time_wib pada jadwal target, tolak scan tanpa membuat catatan absensi.
-  // CATATAN: Status TERLAMBAT TIDAK MUNGKIN terjadi dalam alur absensi otomatis ini.
-  // Scan yang melewati batas langsung DITOLAK (BusinessRuleError).
-  for (const item of schedulesToRecord) {
-    if (timeStr > item.dutySchedule.cutoff_time_wib) {
-      throw new BusinessRuleError(
-        `Batas waktu absensi (${item.dutySchedule.cutoff_time_wib} WIB) telah berakhir. Absensi ditolak.`,
-        "CUTOFF_TIME_EXCEEDED"
-      );
-    }
-  }
+  // Tampilkan status HADIR lebih dulu pada respons perangkat bila anggota punya
+  // lebih dari satu jadwal pada hari yang sama.
+  sessionsToRecord.sort(
+    (a, b) =>
+      Number(b.status === AttendanceStatus.HADIR) -
+      Number(a.status === AttendanceStatus.HADIR)
+  );
 
-  // 7. Proses pencatatan absensi untuk setiap jadwal target (bisa mencatat Sapa Pagi dan Danusan sekaligus)
+  // 7. Proses pencatatan absensi untuk setiap sesi target
   interface ProcessedAttendanceResult {
     id: string;
     status: AttendanceStatus;
     scan_time: Date;
     schedule_id: string;
-    duty_schedule_id: string;
+    duty_schedule_id: string | null;
     activity_name: string;
     is_substitution: boolean;
     is_duplicate: boolean;
   }
   const processedResults: ProcessedAttendanceResult[] = [];
 
-  for (const item of schedulesToRecord) {
-    const { dutySchedule, isSubstitution, status } = item;
+  for (const item of sessionsToRecord) {
+    const { activity, dutyScheduleId, isSubstitution, status } = item;
 
     // Cari atau buat ActivitySchedule hari ini
     let activitySchedule = await prisma.activitySchedule.findFirst({
       where: {
-        activity_id: dutySchedule.activity_id,
+        activity_id: activity.id,
         date: todayUtcMidnight,
       },
     });
 
     if (!activitySchedule) {
-      const startTimeUtc = parseWibToUtc(dutySchedule.start_time_wib, dateStr);
-      const cutoffTimeUtc = parseWibToUtc(dutySchedule.cutoff_time_wib, dateStr);
+      // Sesi yang mengikuti jadwal piket memakai jam jadwal. Sesi penampung tanpa
+      // jadwal (mis. hari tanpa piket) memakai rentang penuh hari agar tidak ada
+      // cutoff palsu yang membuat rekap ALPA salah.
+      const startTimeWib = item.startTimeWib ?? "00:00";
+      const cutoffTimeWib = item.cutoffTimeWib ?? "23:59";
+      const startTimeUtc = parseWibToUtc(startTimeWib, dateStr);
+      const cutoffTimeUtc = parseWibToUtc(cutoffTimeWib, dateStr);
       const sessionEndTimeUtc = parseWibToUtc(
-        addMinutesToTime(dutySchedule.cutoff_time_wib, 30),
+        item.cutoffTimeWib ? addMinutesToTime(item.cutoffTimeWib, 30) : "23:59",
         dateStr
       );
 
       activitySchedule = await prisma.activitySchedule.create({
         data: {
-          activity_id: dutySchedule.activity_id,
+          activity_id: activity.id,
           device_id: device.id,
-          title:
-            dutySchedule.title ?? `${dutySchedule.activity.name} - ${dateStr}`,
+          title: `${activity.name} - ${dateStr}`,
           date: todayUtcMidnight,
           start_time: startTimeUtc,
           late_threshold: cutoffTimeUtc,
@@ -278,8 +314,8 @@ export async function recordRfidAttendance(
         status: existingAttendance.status,
         scan_time: existingAttendance.scan_time,
         schedule_id: activitySchedule.id,
-        duty_schedule_id: existingAttendance.duty_schedule_id ?? dutySchedule.id,
-        activity_name: dutySchedule.activity.name,
+        duty_schedule_id: existingAttendance.duty_schedule_id ?? dutyScheduleId,
+        activity_name: activity.name,
         is_substitution: existingAttendance.is_substitution,
         is_duplicate: true,
       });
@@ -292,7 +328,7 @@ export async function recordRfidAttendance(
         data: {
           member_id: member.id,
           schedule_id: activitySchedule.id,
-          duty_schedule_id: dutySchedule.id,
+          duty_schedule_id: dutyScheduleId,
           is_substitution: isSubstitution,
           scan_time: now,
           status,
@@ -305,8 +341,8 @@ export async function recordRfidAttendance(
         status: attendance.status,
         scan_time: attendance.scan_time,
         schedule_id: activitySchedule.id,
-        duty_schedule_id: dutySchedule.id,
-        activity_name: dutySchedule.activity.name,
+        duty_schedule_id: dutyScheduleId,
+        activity_name: activity.name,
         is_substitution: isSubstitution,
         is_duplicate: false,
       });
@@ -333,8 +369,8 @@ export async function recordRfidAttendance(
           status: existing.status,
           scan_time: existing.scan_time,
           schedule_id: activitySchedule.id,
-          duty_schedule_id: existing.duty_schedule_id ?? dutySchedule.id,
-          activity_name: dutySchedule.activity.name,
+          duty_schedule_id: existing.duty_schedule_id ?? dutyScheduleId,
+          activity_name: activity.name,
           is_substitution: existing.is_substitution,
           is_duplicate: true,
         });

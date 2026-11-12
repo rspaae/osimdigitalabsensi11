@@ -63,7 +63,7 @@ Direktori firmware resmi perangkat pemindai RFID kehadiran OSIS & MPK SMKN 11 BA
 5. Kompilasi dan unggah sketch. Buka kembali **Dashboard → Perangkat IoT**. Dalam sekitar 15–45 detik status perangkat akan berubah menjadi **Terhubung**. Heartbeat hanya memperbarui waktu koneksi dan **tidak membuat data absensi**.
 6. Sebelum produksi, ubah `ALLOW_LOCAL_HTTP` menjadi `0`, gunakan URL HTTPS Vercel, dan isi Root CA yang valid. Jangan commit `secrets.h` atau membagikan API key.
 
-**Penting:** Menempelkan kartu memanggil endpoint absensi sungguhan dan dapat menulis data ke Railway. Untuk cek konektivitas saja, cukup tunggu status heartbeat di dashboard—jangan scan kartu. Jika menguji scan, gunakan kartu anggota yang benar dan pastikan jadwal serta waktu cutoff memang sesuai.
+**Penting:** Menempelkan kartu memanggil endpoint absensi sungguhan dan dapat menulis data ke Railway. Record absensi tidak dapat dihapus (append-only), jadi gunakan kartu anggota yang benar saat menguji. Scan di luar jam piket tetap tercatat sebagai `DI_LUAR_JADWAL`.
 
 ## 5. Troubleshooting & Indikator Layar LCD
 
@@ -76,9 +76,9 @@ Direktori firmware resmi perangkat pemindai RFID kehadiran OSIS & MPK SMKN 11 BA
 | `MEMBER_NOT_FOUND` | `KARTU DITOLAK` | `Belum Terdaftar` | Daftarkan UID kartu pada data anggota yang bersangkutan |
 | `MEMBER_INACTIVE` | `ANGGOTA NONAKTIF` | `Hubungi Admin` | Periksa status keanggotaan siswa di data master |
 | `CYCLE_NOT_CONFIGURED` | `SIKLUS TDK ADA` | `Set di Dashboard` | SUPERADMIN mengatur tanggal mulai siklus |
-| `SCHEDULE_NO_MATCH` | `JADWAL TDK ADA` | `Cek Jam Piket` | Periksa jadwal piket aktif untuk tanggal dan waktu WIB tersebut |
+| `SCHEDULE_NO_MATCH` | `JADWAL TDK ADA` | `Cek Jam Piket` | Tidak lagi dikembalikan untuk scan di luar jam; scan kini dicatat `DI_LUAR_JADWAL`. Kode tetap ditangani firmware sebagai cadangan |
 | `SCHEDULE_AMBIGUOUS` | `JADWAL BENTROK` | `Hubungi Admin` | Administrator menyelesaikan jadwal aktif yang tumpang tindih |
-| `CUTOFF_TIME_EXCEEDED` | `BATAS WKT HABIS` | `Absensi Ditutup` | Scan ditolak setelah cutoff; tidak ada status TERLAMBAT otomatis |
+| `CUTOFF_TIME_EXCEEDED` | `BATAS WKT HABIS` | `Absensi Ditutup` | Tidak lagi dikembalikan; scan setelah cutoff dicatat `DI_LUAR_JADWAL`. Kode tetap ditangani firmware sebagai cadangan |
 | **Network Timeout** | `KONEKSI TIMEOUT` | `Coba Lagi` | Periksa jangkauan sinyal Wi-Fi atau status konektivitas internet |
 
 ---
@@ -99,8 +99,8 @@ Gunakan daftar uji berikut untuk memvalidasi fungsi pemindai di lapangan setelah
 | 8 | **Unknown RFID Card** | Tempel kartu belum terdaftar | `KARTU DITOLAK` / `Belum Terdaftar` | `[ ] NOT TESTED` |
 | 9 | **Duplicate Scan** | Tempel ulang kartu yang sudah absen | `<Nama Anggota>` / `SUDAH: HADIR` | `[ ] NOT TESTED` |
 | 10 | **HADIR Response** | Scan pada atau sebelum cutoff dalam jadwal piket aktif | `<Nama Anggota>` / `STATUS: HADIR` | `[ ] NOT TESTED` |
-| 11 | **Cutoff Rejection** | Scan setelah cutoff jadwal | `BATAS WKT HABIS` / `Absensi Ditutup` | `[ ] NOT TESTED` |
-| 12 | **No Matching Duty** | Scan saat tidak ada jadwal piket yang cocok | `JADWAL TDK ADA` / `Cek Jam Piket` | `[ ] NOT TESTED` |
+| 11 | **Scan di luar jadwal** | Scan setelah cutoff atau di luar jam piket | `<Nama Anggota>` / `DI LUAR JADWAL` | `[ ] NOT TESTED` |
+| 12 | **Hari tanpa jadwal** | Scan pada hari tanpa jadwal piket | `<Nama Anggota>` / `DI LUAR JADWAL` | `[ ] NOT TESTED` |
 | 13 | **Wi-Fi Disconnection**| Matikan access point Wi-Fi | `Koneksi Putus!` / `Reconnecting...` | `[ ] NOT TESTED` |
 | 14 | **Wi-Fi Reconnection**| Hidupkan kembali access point | `WiFi Terhubung!` / `SMKN 11 BANDUNG` | `[ ] NOT TESTED` |
 | 15 | **Device Deactivation**| Set `is_active = false` di backend | `DEVICE NONAKTIF` / `Hubungi Admin` | `[ ] NOT TESTED` |
