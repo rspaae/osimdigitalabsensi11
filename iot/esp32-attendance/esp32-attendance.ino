@@ -173,7 +173,8 @@ void sendAttendanceScan(const String &rfidUid) {
     return;
   }
 
-  displayLcd("Memproses...", "UID: " + rfidUid);
+  // UID tidak ditampilkan di LCD (hanya di Serial Monitor) agar kode kartu tidak bocor.
+  displayLcd("Scanning...", "Mohon tunggu");
 
   HTTPClient https;
   String targetUrl = String(SERVER_BASE_URL) + String(API_SCAN_PATH);
