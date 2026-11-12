@@ -2650,3 +2650,75 @@ select.cycle-field-input {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================================
+   LIVE REFRESH INDICATOR
+   ============================================================================ */
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: 1px solid var(--workspace-border, #e3e9e6);
+  border-radius: 999px;
+  background: #fff;
+  color: #5f6f66;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9aa59f;
+}
+
+.live-dot.is-on {
+  background: #22a06b;
+  animation: live-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(34 160 107 / 35%);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgb(34 160 107 / 0%);
+  }
+}
+
+.live-toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #286b50;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.live-toggle:hover {
+  text-decoration: underline;
+}
+
+.home-head-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rekap-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 700px) {
+  .home-head-side {
+    flex-wrap: wrap;
+  }
+}

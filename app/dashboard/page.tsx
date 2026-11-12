@@ -8,6 +8,7 @@ import { getCycleStatus } from "@/lib/services/duty.service";
 import { prisma } from "@/lib/db/prisma";
 import { getWibDateComponents } from "@/lib/utils/duty-cycle";
 import { parseDateOnlyToUtc } from "@/lib/utils/timezone";
+import LiveRefresh from "./LiveRefresh";
 import {
   ATTENDANCE_STATUS_LABEL,
   ATTENDANCE_STATUS_ORDER,
@@ -259,9 +260,12 @@ export default async function DashboardPage() {
             {dateLabel} · {cycleLabel} · {numberFormat.format(dutyCards.length)} kegiatan piket
           </p>
         </div>
-        <div className="home-date-chip" aria-label={dateLabel}>
-          <span className="home-date-day">{dayNumber}</span>
-          <span className="home-date-rest">{monthLabel}</span>
+        <div className="home-head-side">
+          <LiveRefresh />
+          <div className="home-date-chip" aria-label={dateLabel}>
+            <span className="home-date-day">{dayNumber}</span>
+            <span className="home-date-rest">{monthLabel}</span>
+          </div>
         </div>
       </header>
 

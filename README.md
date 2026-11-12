@@ -33,6 +33,7 @@ Cetak biru lengkap ada di [docs/architecture.md](docs/architecture.md).
 | Perangkat IoT | Registrasi device, rotasi API key (hash bcrypt, raw hanya tampil sekali), heartbeat `last_seen` |
 | Dashboard | Ringkasan anggota, cakupan UID, jadwal aktif, perangkat aktif, status kesiapan scan |
 | Rekap presensi | Tampilan presensi realtime per tanggal (WIB) |
+| Pembaruan live | Ringkasan & rekap menyegarkan data otomatis tiap 5 detik (bisa dijeda), berhenti saat tab tidak aktif |
 
 ### Backend tersedia, UI belum ada
 

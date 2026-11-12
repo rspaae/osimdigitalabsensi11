@@ -7,6 +7,7 @@ import { AppModule, PermissionAction } from "@/types/auth";
 import { prisma } from "@/lib/db/prisma";
 import { getWibDateComponents } from "@/lib/utils/duty-cycle";
 import AttendanceViewer, { type AttendanceRecordItem } from "./AttendanceViewer";
+import LiveRefresh from "../LiveRefresh";
 
 export const instant = false;
 
@@ -103,10 +104,13 @@ export default async function AttendancePage({ searchParams }: PageProps) {
         </nav>
         <div className="settings-page-title-row">
           <h1 className="settings-page-title">Rekapitulasi Presensi Kehadiran</h1>
-          <span className="settings-role-badge">{user.role}</span>
+          <div className="rekap-head-actions">
+            <LiveRefresh />
+            <span className="settings-role-badge">{user.role}</span>
+          </div>
         </div>
         <p className="settings-page-desc">
-          Pantau seluruh rekaman presensi masuk siswa secara langsung (real-time) dari perangkat RFID scanner ESP32 dan verifikasi manual.
+          Pantau seluruh rekaman presensi masuk siswa secara langsung (real-time) dari perangkat RFID scanner ESP32 dan verifikasi manual. Halaman menyegarkan diri setiap 5 detik.
         </p>
       </header>
 
