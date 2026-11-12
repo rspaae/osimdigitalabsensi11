@@ -27,7 +27,8 @@ Cetak biru lengkap ada di [docs/architecture.md](docs/architecture.md).
 | Jadwal & roster | Jadwal piket per kegiatan/hari/minggu, penugasan roster, substitusi anggota |
 | Absensi RFID | Scan kartu → verifikasi device → evaluasi waktu server WIB → `HADIR` bila di dalam jendela piket, selain itu `DI_LUAR_JADWAL` (scan tidak pernah ditolak karena waktu); idempoten terhadap scan ganda |
 | Sesi otomatis | `ActivitySchedule` harian dibuat otomatis saat scan pertama, tanpa perlu buka sesi manual |
-| Koreksi & audit | `PATCH /api/v1/attendance/[id]` wajib alasan ≥ 10 karakter, update + `AuditLog` dalam satu transaksi atomik |
+| Koreksi & audit | `PATCH /api/v1/attendance/[id]` wajib alasan ≥ 10 karakter, update + `AuditLog` dalam satu transaksi atomik. Tersedia juga UI di `/dashboard/attendance/[id]` |
+| Jejak tap berulang | Scan ulang menambah `scan_count` dan memperbarui `last_scan_at`; `DI_LUAR_JADWAL` otomatis naik ke `HADIR` bila tap ulang terjadi di dalam jam piket |
 | Rekonsiliasi ALPA | `POST /api/v1/schedules/[id]/reconcile` untuk sesi `CLOSED`, idempoten |
 | Perangkat IoT | Registrasi device, rotasi API key (hash bcrypt, raw hanya tampil sekali), heartbeat `last_seen` |
 | Dashboard | Ringkasan anggota, cakupan UID, jadwal aktif, perangkat aktif, status kesiapan scan |

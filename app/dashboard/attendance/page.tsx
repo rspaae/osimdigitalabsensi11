@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/context";
+import { canAccessModule } from "@/lib/auth/rbac";
+import { AppModule, PermissionAction } from "@/types/auth";
 import { prisma } from "@/lib/db/prisma";
 import { getWibDateComponents } from "@/lib/utils/duty-cycle";
 import AttendanceViewer, { type AttendanceRecordItem } from "./AttendanceViewer";
@@ -19,6 +21,12 @@ interface PageProps {
 export default async function AttendancePage({ searchParams }: PageProps) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+
+  const canCorrect = canAccessModule(
+    user,
+    AppModule.HISTORY_CORRECTION,
+    PermissionAction.CORRECT
+  );
 
   const resolvedParams = searchParams ? await searchParams : {};
   const { dateStr: todayDateWib } = getWibDateComponents(new Date());
@@ -70,6 +78,9 @@ export default async function AttendancePage({ searchParams }: PageProps) {
     status: att.status as AttendanceRecordItem["status"],
     method: att.method as AttendanceRecordItem["method"],
     notes: att.notes,
+    scan_count: att.scan_count,
+    last_scan_at: att.last_scan_at.toISOString(),
+    auto_upgraded_at: att.auto_upgraded_at ? att.auto_upgraded_at.toISOString() : null,
     activity_name: att.schedule.activity.name,
     activity_code: att.schedule.activity.code,
     member: {
@@ -102,6 +113,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
       <AttendanceViewer
         initialRecords={formattedRecords}
         selectedDate={selectedDate}
+        canCorrect={canCorrect}
       />
     </main>
   );

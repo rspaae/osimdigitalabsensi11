@@ -2,10 +2,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getSessionUser } from "@/lib/auth/context";
+import { canAccessModule } from "@/lib/auth/rbac";
+import { AppModule, PermissionAction } from "@/types/auth";
 import { getCycleStatus } from "@/lib/services/duty.service";
 import { prisma } from "@/lib/db/prisma";
 import { getWibDateComponents } from "@/lib/utils/duty-cycle";
 import { parseDateOnlyToUtc } from "@/lib/utils/timezone";
+import {
+  ATTENDANCE_STATUS_LABEL,
+  ATTENDANCE_STATUS_ORDER,
+  ATTENDANCE_STATUS_STYLE,
+} from "@/lib/utils/attendance-status";
 
 export const instant = false;
 
@@ -31,34 +38,6 @@ const ORG_LABEL: Record<string, string> = {
   GENERAL: "Umum",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  HADIR: "Hadir",
-  TERLAMBAT: "Terlambat",
-  IZIN: "Izin",
-  SAKIT: "Sakit",
-  ALPA: "Alpa",
-  DI_LUAR_JADWAL: "Di luar jam",
-};
-
-const STATUS_STYLE: Record<string, string> = {
-  HADIR: "hadir",
-  TERLAMBAT: "terlambat",
-  IZIN: "izin",
-  SAKIT: "sakit",
-  ALPA: "alpa",
-  DI_LUAR_JADWAL: "luar",
-};
-
-/** Urutan tampil: yang sudah tercatat lebih dulu, yang belum scan di bawah. */
-const STATUS_ORDER: Record<string, number> = {
-  HADIR: 0,
-  DI_LUAR_JADWAL: 1,
-  IZIN: 2,
-  SAKIT: 2,
-  TERLAMBAT: 3,
-  ALPA: 4,
-};
-
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const letters = parts.slice(0, 2).map((part) => part[0] ?? "");
@@ -76,6 +55,12 @@ function personMeta(member: {
 export default async function DashboardPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+
+  const canCorrect = canAccessModule(
+    user,
+    AppModule.HISTORY_CORRECTION,
+    PermissionAction.CORRECT
+  );
 
   const now = new Date();
   const wib = getWibDateComponents(now);
@@ -189,8 +174,12 @@ export default async function DashboardPage() {
     }
 
     rows.sort((a, b) => {
-      const orderA = a.attendance ? (STATUS_ORDER[a.attendance.status] ?? 5) : 6;
-      const orderB = b.attendance ? (STATUS_ORDER[b.attendance.status] ?? 5) : 6;
+      const orderA = a.attendance
+        ? (ATTENDANCE_STATUS_ORDER[a.attendance.status] ?? 5)
+        : 6;
+      const orderB = b.attendance
+        ? (ATTENDANCE_STATUS_ORDER[b.attendance.status] ?? 5)
+        : 6;
       if (orderA !== orderB) return orderA - orderB;
       return a.member.full_name.localeCompare(b.member.full_name, "id");
     });
@@ -407,10 +396,11 @@ export default async function DashboardPage() {
                           {row.attendance ? (
                             <span
                               className={`home-status is-${
-                                STATUS_STYLE[row.attendance.status] ?? "belum"
+                                ATTENDANCE_STATUS_STYLE[row.attendance.status] ?? "belum"
                               }`}
                             >
-                              {STATUS_LABEL[row.attendance.status] ?? row.attendance.status}
+                              {ATTENDANCE_STATUS_LABEL[row.attendance.status] ??
+                                row.attendance.status}
                             </span>
                           ) : (
                             <span className="home-status is-belum">Belum scan</span>
@@ -525,6 +515,13 @@ export default async function DashboardPage() {
                         <time dateTime={record.scan_time.toISOString()}>
                           {scanWib.timeWithSecondsStr}
                         </time>
+                        {record.scan_count > 1 && (
+                          <small
+                            title={`Tap terakhir: ${getWibDateComponents(record.last_scan_at).timeWithSecondsStr} WIB`}
+                          >
+                            {record.scan_count}× tap
+                          </small>
+                        )}
                       </td>
                       <td>
                         <strong>{record.member.full_name}</strong>
@@ -533,12 +530,22 @@ export default async function DashboardPage() {
                       <td>{record.schedule.activity.name}</td>
                       <td className="home-col-method">{record.method === "RFID" ? "RFID" : "Manual"}</td>
                       <td>
-                        <span
-                          className={`home-status is-${
-                            STATUS_STYLE[record.status] ?? "belum"
-                          }`}
-                        >
-                          {STATUS_LABEL[record.status] ?? record.status}
+                        <span className="home-status-cell">
+                          <span
+                            className={`home-status is-${
+                              ATTENDANCE_STATUS_STYLE[record.status] ?? "belum"
+                            }`}
+                          >
+                            {ATTENDANCE_STATUS_LABEL[record.status] ?? record.status}
+                          </span>
+                          {canCorrect && (
+                            <Link
+                              href={`/dashboard/attendance/${record.id}`}
+                              className="home-row-action"
+                            >
+                              Koreksi
+                            </Link>
+                          )}
                         </span>
                       </td>
                     </tr>

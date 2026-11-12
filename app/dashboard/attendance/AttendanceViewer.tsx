@@ -9,6 +9,9 @@ export interface AttendanceRecordItem {
   status: "HADIR" | "TERLAMBAT" | "IZIN" | "SAKIT" | "ALPA" | "DI_LUAR_JADWAL";
   method: "RFID" | "MANUAL";
   notes: string | null;
+  scan_count: number;
+  last_scan_at: string;
+  auto_upgraded_at: string | null;
   activity_name: string;
   activity_code: string;
   member: {
@@ -24,9 +27,10 @@ export interface AttendanceRecordItem {
 interface Props {
   initialRecords: AttendanceRecordItem[];
   selectedDate: string; // YYYY-MM-DD
+  canCorrect: boolean;
 }
 
-export default function AttendanceViewer({ initialRecords, selectedDate }: Props) {
+export default function AttendanceViewer({ initialRecords, selectedDate, canCorrect }: Props) {
   const [filterDate, setFilterDate] = useState(selectedDate);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -200,6 +204,16 @@ export default function AttendanceViewer({ initialRecords, selectedDate }: Props
                         <strong style={{ fontFamily: "monospace", fontSize: 13 }}>
                           {timeFormatted} WIB
                         </strong>
+                        {item.scan_count > 1 && (
+                          <small style={{ display: "block", marginTop: 3, color: "var(--text-muted)", fontSize: 11 }}>
+                            {item.scan_count}× tap
+                          </small>
+                        )}
+                        {item.auto_upgraded_at && (
+                          <small style={{ display: "block", marginTop: 3, color: "#226b45", fontSize: 11 }}>
+                            naik otomatis ke HADIR
+                          </small>
+                        )}
                       </td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center" }}>
@@ -232,6 +246,15 @@ export default function AttendanceViewer({ initialRecords, selectedDate }: Props
                         <span className={`badge-status ${statusBadgeClass}`}>
                           {item.status === "DI_LUAR_JADWAL" ? "DI LUAR JADWAL" : item.status}
                         </span>
+                        {canCorrect && (
+                          <Link
+                            href={`/dashboard/attendance/${item.id}`}
+                            className="member-secondary-link"
+                            style={{ display: "inline-block", marginTop: 6, fontSize: 11 }}
+                          >
+                            Koreksi →
+                          </Link>
+                        )}
                       </td>
                       <td>
                         <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
