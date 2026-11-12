@@ -28,7 +28,6 @@
 *.pem
 secrets.h
 **/secrets.h
-iot/esp32-attendance-single/
 .pio
 .vscode/.browse.c_cpp.db*
 .idea/
