@@ -28,6 +28,11 @@ export default async function AttendancePage({ searchParams }: PageProps) {
     AppModule.HISTORY_CORRECTION,
     PermissionAction.CORRECT
   );
+  const canCreate = canAccessModule(
+    user,
+    AppModule.ATTENDANCE,
+    PermissionAction.CREATE
+  );
 
   const resolvedParams = searchParams ? await searchParams : {};
   const { dateStr: todayDateWib } = getWibDateComponents(new Date());
@@ -105,6 +110,11 @@ export default async function AttendancePage({ searchParams }: PageProps) {
         <div className="settings-page-title-row">
           <h1 className="settings-page-title">Rekapitulasi Presensi Kehadiran</h1>
           <div className="rekap-head-actions">
+            {canCreate && (
+              <Link href="/dashboard/attendance/manual" className="overview-primary-action">
+                Input manual
+              </Link>
+            )}
             <LiveRefresh />
             <span className="settings-role-badge">{user.role}</span>
           </div>

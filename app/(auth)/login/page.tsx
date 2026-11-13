@@ -53,18 +53,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               {/* Shield icon — representasi organisasi & kepercayaan */}
               <path
                 d="M24 4L6 12v12c0 10.5 7.7 20.3 18 22.5C34.3 44.3 42 34.5 42 24V12L24 4z"
-                fill="#6EE7B7"
-                stroke="#059669"
+                fill="#60A5FA"
+                stroke="#2563EB"
                 strokeWidth="2"
               />
               <path
                 d="M24 4L6 12v12c0 10.5 7.7 20.3 18 22.5"
-                fill="#A7F3D0"
-                opacity="0.5"
+                fill="#93C5FD"
+                opacity="0.55"
               />
               <path
                 d="M18 23l4 4 8-8"
-                stroke="#065F46"
+                stroke="#1E3A8A"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"

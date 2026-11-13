@@ -481,7 +481,7 @@ export async function createManualAttendance(
   // 2. Validasi schedule
   const schedule = await prisma.activitySchedule.findUnique({
     where: { id: input.schedule_id },
-    select: { id: true, status: true },
+    select: { id: true, status: true, start_time: true },
   });
 
   if (!schedule) {
@@ -530,7 +530,10 @@ export async function createManualAttendance(
         status: input.status,
         method: input.method,
         notes: input.notes ?? null,
-        scan_time: new Date(),
+        // Presensi manual dicap pada jam mulai sesi, bukan jam input, agar
+        // rekap per tanggal (yang memfilter scan_time) tetap konsisten bila
+        // pengurus mengisi data untuk sesi di tanggal sebelumnya.
+        scan_time: schedule.start_time,
       },
       include: {
         member: { select: { id: true, full_name: true, nis: true } },

@@ -33,20 +33,22 @@ Cetak biru lengkap ada di [docs/architecture.md](docs/architecture.md).
 | Perangkat IoT | Registrasi device, rotasi API key (hash bcrypt, raw hanya tampil sekali), heartbeat `last_seen` |
 | Dashboard | Ringkasan anggota, cakupan UID, jadwal aktif, perangkat aktif, status kesiapan scan |
 | Rekap presensi | Tampilan presensi realtime per tanggal (WIB) |
+| Input manual | Membuat sesi kegiatan manual (jam terisi otomatis dari jadwal piket bila ada) lalu mencatat HADIR/TERLAMBAT/IZIN/SAKIT; ALPA tetap hanya lewat rekonsiliasi |
+| Laporan & ekspor | Rekap kehadiran per periode (nama, kelas, jabatan, status) siap cetak A4, unduh CSV, dan unduh `.xlsx`; filter rentang tanggal, kegiatan, organisasi, dan anggota nonaktif |
 | Pembaruan live | Ringkasan & rekap menyegarkan data otomatis tiap 5 detik (bisa dijeda), berhenti saat tab tidak aktif |
 
 ### Backend tersedia, UI belum ada
 
-- Input manual `IZIN`/`SAKIT` dan koreksi status dari dashboard
-- Manajemen kegiatan, sesi harian (buka/tutup), dan rekonsiliasi ALPA
+- Manajemen kegiatan (tambah/ubah/nonaktifkan) dari dashboard
+- Penutupan sesi harian dan rekonsiliasi ALPA (API sudah ada)
 - Manajemen jabatan, Sekbid, dan Komisi (API sudah lengkap)
 - Manajemen akun pengguna dan penampil audit log
 
 ### Belum diimplementasikan
 
 - Modul pelanggaran (model `Violation` sudah ada, service/API/UI belum)
-- Ekspor laporan `.xlsx` / `.pdf`
 - Ringkasan dashboard berbeda per role (saat ini satu tampilan dengan menu menyesuaikan role)
+- Kalender laporan per tanggal pertemuan (laporan hanya merekap jumlah per status)
 
 ---
 
@@ -100,7 +102,7 @@ Buka `http://localhost:3000`, login di `/login`. Cek kesehatan sistem di `/api/h
 | `npm run build` | Production build |
 | `npm start` | Menjalankan hasil build |
 | `npm run lint` | ESLint |
-| `npm test` | 130 test (7 suite, logika murni tanpa koneksi DB) |
+| `npm test` | 148 test (9 suite, logika murni tanpa koneksi DB) |
 | `npm run setup:superadmin` | Inisialisasi akun Superadmin pertama |
 
 Pemeriksaan tipe: `npx tsc --noEmit`.
@@ -187,4 +189,7 @@ Panduan lengkap: [docs/iot-device-setup.md](docs/iot-device-setup.md).
 - Waktu kehadiran selalu memakai jam server (`Asia/Jakarta`). Timestamp dari ESP32 tidak dipercaya.
 - `AuditLog` bersifat append-only: tidak ada endpoint update/delete.
 - Satu anggota hanya boleh punya satu record per sesi (`@@unique([member_id, schedule_id])`).
+- Laporan kehadiran hanya menghitung sesi `OPEN`/`CLOSED`; persentase = (`HADIR` + `TERLAMBAT`) ÷ jumlah sesi × 100, dan sesi tanpa rekaman ditampilkan pada kolom "Belum".
+- Ekspor `.xlsx` dibuat langsung di server tanpa dependensi eksternal (`lib/utils/xlsx.ts`), berisi sheet `Kehadiran` (header beku + auto-filter) dan `Info` (parameter laporan).
+- Presensi manual memakai jam mulai sesi sebagai `scan_time` (bukan jam input) agar rekap per tanggal tetap konsisten saat data diisi untuk tanggal sebelumnya.
 - Test suite bersifat simulasi logika murni (tanpa DB), sehingga tidak menggantikan pengujian end-to-end terhadap service + database.

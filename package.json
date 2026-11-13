@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test tests/auth.test.ts tests/auth-db.test.ts tests/member-org.test.ts tests/activity-schedule.test.ts tests/attendance.test.ts tests/device-iot.test.ts tests/automatic-attendance.test.ts",
+    "test": "tsx --env-file-if-exists=.env --test tests/auth.test.ts tests/auth-db.test.ts tests/member-org.test.ts tests/activity-schedule.test.ts tests/attendance.test.ts tests/device-iot.test.ts tests/automatic-attendance.test.ts tests/report.test.ts tests/xlsx.test.ts",
     "postinstall": "prisma generate",
-    "setup:superadmin": "tsx scripts/setup-superadmin.ts"
+    "setup:superadmin": "tsx --env-file-if-exists=.env scripts/setup-superadmin.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

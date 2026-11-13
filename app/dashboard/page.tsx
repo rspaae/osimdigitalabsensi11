@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { getSessionUser } from "@/lib/auth/context";
 import { canAccessModule } from "@/lib/auth/rbac";
 import { AppModule, PermissionAction } from "@/types/auth";
@@ -39,6 +40,8 @@ const ORG_LABEL: Record<string, string> = {
   GENERAL: "Umum",
 };
 
+const WEEKDAY_SHORT = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const letters = parts.slice(0, 2).map((part) => part[0] ?? "");
@@ -53,6 +56,38 @@ function personMeta(member: {
   return member.class_grade ? `${member.class_grade} · ${org}` : org;
 }
 
+interface TaskRowProps {
+  tone: "is-lav" | "is-mint" | "is-cream" | "is-pink";
+  title: string;
+  detail: string;
+  href?: string;
+  children: ReactNode;
+}
+
+/** Satu baris daftar kesiapan; memakai tautan hanya bila pengguna boleh membuka halaman tujuan. */
+function TaskRow({ tone, title, detail, href, children }: TaskRowProps) {
+  const body = (
+    <>
+      <span className={`dh-task-icon ${tone}`} aria-hidden="true">{children}</span>
+      <span className="dh-task-copy">
+        <strong>{title}</strong>
+        <small>{detail}</small>
+      </span>
+      {href ? <span className="dh-task-arrow" aria-hidden="true">›</span> : null}
+    </>
+  );
+
+  return (
+    <li>
+      {href ? (
+        <Link href={href} className="dh-task">{body}</Link>
+      ) : (
+        <div className="dh-task">{body}</div>
+      )}
+    </li>
+  );
+}
+
 export default async function DashboardPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
@@ -62,6 +97,7 @@ export default async function DashboardPage() {
     AppModule.HISTORY_CORRECTION,
     PermissionAction.CORRECT
   );
+  const canManage = user.role === "SUPERADMIN";
 
   const now = new Date();
   const wib = getWibDateComponents(now);
@@ -240,331 +276,444 @@ export default async function DashboardPage() {
   }).format(now);
   const monthLabel = new Intl.DateTimeFormat("id-ID", {
     timeZone: "Asia/Jakarta",
-    month: "short",
+    month: "long",
     year: "numeric",
   }).format(now);
-  const dayNumber = String(Number(wib.dateStr.slice(8, 10)));
   const cycleLabel = cycleWeek
     ? cycleWeek === "WEEK_1"
       ? "Minggu ke-1"
       : "Minggu ke-2"
     : "Siklus belum aktif";
+  const attendancePercent =
+    petugasIds.size === 0
+      ? 0
+      : Math.round((petugasAbsenIds.size / petugasIds.size) * 100);
+
+  // Kalender bulan berjalan menurut WIB; Senin sebagai kolom pertama.
+  const [wibYear, wibMonth, wibDay] = wib.dateStr.split("-").map(Number);
+  const firstWeekday = new Date(Date.UTC(wibYear, wibMonth - 1, 1)).getUTCDay();
+  const leadingBlanks = (firstWeekday + 6) % 7;
+  const daysInMonth = new Date(Date.UTC(wibYear, wibMonth, 0)).getUTCDate();
+  const calendarCells: Array<number | null> = [
+    ...Array.from({ length: leadingBlanks }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+  ];
+  while (calendarCells.length % 7 !== 0) calendarCells.push(null);
+
+  const dayLabel = DAY_LABEL[wib.dayOfWeek] ?? wib.dayOfWeek;
 
   return (
-    <main className="overview-home">
-      <header className="home-head">
-        <div>
-          <p className="home-eyebrow">RINGKASAN HARI INI</p>
-          <h1>Halo, {user.username}</h1>
-          <p className="home-subtitle">
-            {dateLabel} · {cycleLabel} · {numberFormat.format(dutyCards.length)} kegiatan piket
+    <main className="dh-root">
+      <section className="dh-hero" aria-labelledby="home-hero-title">
+        <div className="dh-hero-copy">
+          <span className="dh-hero-date">{dateLabel}</span>
+          <h1 id="home-hero-title">Selamat datang, {user.username}!</h1>
+          <p className="dh-hero-sub">
+            {cycleLabel} · {numberFormat.format(dutyCards.length)} kegiatan piket hari ini ·{" "}
+            {numberFormat.format(petugasAbsenIds.size)} dari{" "}
+            {numberFormat.format(petugasIds.size)} petugas sudah absen.
           </p>
-        </div>
-        <div className="home-head-side">
-          <LiveRefresh />
-          <div className="home-date-chip" aria-label={dateLabel}>
-            <span className="home-date-day">{dayNumber}</span>
-            <span className="home-date-rest">{monthLabel}</span>
+
+          <div className="dh-hero-meta">
+            <span className="dh-hero-chip">{dayLabel}</span>
+            <span className="dh-hero-chip">{wib.timeStr} WIB</span>
+            <span className="dh-hero-chip">
+              {numberFormat.format(attendances.length)} scan masuk
+            </span>
+          </div>
+
+          <div className="dh-hero-progress">
+            <div className="dh-hero-progress-copy">
+              <span>
+                {petugasIds.size === 0
+                  ? "Belum ada petugas terjadwal hari ini"
+                  : "Progres absensi petugas"}
+              </span>
+              <strong>{attendancePercent}%</strong>
+            </div>
+            <div
+              className="dh-hero-track"
+              role="progressbar"
+              aria-label="Progres absensi petugas hari ini"
+              aria-valuenow={attendancePercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <i style={{ width: `${attendancePercent}%` }} />
+            </div>
           </div>
         </div>
-      </header>
 
-      {user.role === "SUPERADMIN" && !cycleStatus?.configured && (
-        <section className="overview-alert" role="alert">
-          <span className="overview-alert-mark" aria-hidden="true">!</span>
+        <div className="dh-hero-art" aria-hidden="true">
+          <svg viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="152" cy="30" r="24" fill="rgba(255,255,255,0.14)" />
+            <circle cx="44" cy="122" r="16" fill="rgba(255,255,255,0.1)" />
+            <rect x="30" y="36" width="104" height="70" rx="14" transform="rotate(-7 30 36)" fill="rgba(255,255,255,0.94)" />
+            <rect x="40" y="48" width="46" height="6" rx="3" transform="rotate(-7 40 48)" fill="#c9d8f6" />
+            <circle cx="52" cy="74" r="10" fill="#e9f0ff" />
+            <path d="M47.8 74.4l3 3 5.2-5.6" stroke="#2f6bff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <rect x="70" y="68" width="52" height="6" rx="3" transform="rotate(-7 70 68)" fill="#dbe5fa" />
+            <rect x="70" y="80" width="36" height="6" rx="3" transform="rotate(-7 70 80)" fill="#e6eefb" />
+            <rect x="116" y="86" width="58" height="38" rx="9" transform="rotate(8 116 86)" fill="rgba(255,255,255,0.9)" />
+            <rect x="126" y="96" width="18" height="13" rx="3" transform="rotate(8 126 96)" fill="#2f6bff" opacity="0.75" />
+            <path d="M152 98h6M151 105h10" stroke="#b9cdf2" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+        </div>
+      </section>
+
+      {canManage && !cycleStatus?.configured && (
+        <section className="dh-notice" role="alert">
+          <span className="dh-notice-mark" aria-hidden="true">!</span>
           <div>
             <strong>Siklus absensi belum dikonfigurasi</strong>
             <p>Atur tanggal awal siklus sebelum perangkat menerima scan RFID.</p>
           </div>
-          <Link href="/dashboard/settings/cycle" className="overview-alert-link">Atur siklus</Link>
+          <Link href="/dashboard/settings/cycle">Atur siklus</Link>
         </section>
       )}
 
-      <section className="home-stats" aria-label="Ringkasan kehadiran hari ini">
-        <article className="home-stat">
-          <span className="home-stat-label">Petugas hari ini</span>
-          <strong>{numberFormat.format(petugasIds.size)}</strong>
-          <span className="home-stat-note">
+      <section className="dh-metrics" aria-label="Ringkasan kehadiran hari ini">
+        <article className="dh-metric is-lav">
+          <div className="dh-metric-top">
+            <span className="dh-metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m13 10v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" /></svg>
+            </span>
+            <span className="dh-metric-label">Petugas hari ini</span>
+          </div>
+          <strong className="dh-metric-value">{numberFormat.format(petugasIds.size)}</strong>
+          <span className="dh-metric-note">
             {numberFormat.format(dutyCards.length)} kegiatan piket
           </span>
         </article>
-        <article className="home-stat">
-          <span className="home-stat-label">Sudah absen</span>
-          <strong>
+
+        <article className="dh-metric is-mint">
+          <div className="dh-metric-top">
+            <span className="dh-metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1" /><path d="m9 11 3 3L22 4" /></svg>
+            </span>
+            <span className="dh-metric-label">Sudah absen</span>
+          </div>
+          <strong className="dh-metric-value">
             {numberFormat.format(petugasAbsenIds.size)}
             <small> / {numberFormat.format(petugasIds.size)}</small>
           </strong>
-          <span className="home-stat-note">
+          <span className="dh-metric-note">
             {numberFormat.format(petugasHadirIds.size)} hadir tepat waktu
           </span>
         </article>
-        <article className="home-stat">
-          <span className="home-stat-label">Belum absen</span>
-          <strong>{numberFormat.format(belumAbsen)}</strong>
-          <span className="home-stat-note">
+
+        <article className="dh-metric is-pink">
+          <div className="dh-metric-top">
+            <span className="dh-metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            </span>
+            <span className="dh-metric-label">Belum absen</span>
+          </div>
+          <strong className="dh-metric-value">{numberFormat.format(belumAbsen)}</strong>
+          <span className="dh-metric-note">
             {belumAbsen === 0
               ? "Semua petugas sudah tercatat"
               : "Belum ada rekaman scan sampai sekarang"}
           </span>
         </article>
-        <article className="home-stat">
-          <span className="home-stat-label">Scan masuk</span>
-          <strong>{numberFormat.format(attendances.length)}</strong>
-          <span className="home-stat-note">termasuk anggota non-petugas</span>
+
+        <article className="dh-metric is-cream">
+          <div className="dh-metric-top">
+            <span className="dh-metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="3" /><path d="M2 11h20M6.5 15h4" /></svg>
+            </span>
+            <span className="dh-metric-label">Scan masuk</span>
+          </div>
+          <strong className="dh-metric-value">{numberFormat.format(attendances.length)}</strong>
+          <span className="dh-metric-note">termasuk anggota non-petugas</span>
         </article>
       </section>
 
-      <div className="home-grid">
-        <section className="home-panel" aria-labelledby="home-schedule-title">
-          <header className="home-panel-head">
-            <div>
-              <p className="home-eyebrow">JADWAL PIKET</p>
-              <h2 id="home-schedule-title">Hari ini</h2>
-            </div>
-            <span className="home-panel-note">
-              {DAY_LABEL[wib.dayOfWeek] ?? wib.dayOfWeek} · {cycleLabel} · {wib.timeStr} WIB
-            </span>
-          </header>
+      <div className="dh-grid">
+        <div className="dh-col">
+          <section className="dh-panel" aria-labelledby="home-schedule-title">
+            <header className="dh-panel-head">
+              <div>
+                <p className="dh-panel-eyebrow">JADWAL PIKET</p>
+                <h2 className="dh-panel-title" id="home-schedule-title">Hari ini</h2>
+              </div>
+              <div className="dh-panel-note">
+                <LiveRefresh />
+              </div>
+            </header>
 
-          {dutyCards.length === 0 ? (
-            <div className="home-empty">
-              <strong>Tidak ada jadwal piket hari ini</strong>
-              <span>
-                {cycleStatus?.configured
-                  ? "Belum ada jadwal aktif untuk hari ini. Scan yang masuk tetap dicatat sebagai “Di luar jam”."
-                  : "Atur tanggal mulai siklus lebih dulu agar jadwal piket bisa ditentukan."}
-              </span>
-              {user.role === "SUPERADMIN" && !cycleStatus?.configured && (
-                <Link href="/dashboard/settings/cycle" className="home-link">
-                  Atur siklus →
-                </Link>
+            {dutyCards.length === 0 ? (
+              <div className="dh-empty">
+                <strong>Tidak ada jadwal piket hari ini</strong>
+                <span>
+                  {cycleStatus?.configured
+                    ? "Belum ada jadwal aktif untuk hari ini. Scan yang masuk tetap dicatat sebagai “Di luar jam”."
+                    : "Atur tanggal mulai siklus lebih dulu agar jadwal piket bisa ditentukan."}
+                </span>
+                {canManage && !cycleStatus?.configured && (
+                  <Link href="/dashboard/settings/cycle" className="dh-empty-link">
+                    Atur siklus →
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="dh-duty-list">
+                {dutyCards.map((duty) => (
+                  <article className={`dh-duty is-${duty.state}`} key={duty.id}>
+                    <div className="dh-duty-top">
+                      <div>
+                        <h3 className="dh-duty-name">{duty.activityName}</h3>
+                        <p className="dh-duty-time">
+                          {duty.startTime}–{duty.cutoffTime} WIB
+                        </p>
+                      </div>
+                      <span className="dh-duty-badge">
+                        {duty.state === "live"
+                          ? "Berlangsung"
+                          : duty.state === "soon"
+                            ? "Belum mulai"
+                            : "Selesai"}
+                      </span>
+                    </div>
+
+                    <div className="dh-duty-progress">
+                      <div className="dh-duty-progress-copy">
+                        <span>
+                          {duty.scannedCount} dari {duty.total} petugas sudah absen
+                        </span>
+                        <strong>{duty.percentage}%</strong>
+                      </div>
+                      <div
+                        className="dh-duty-track"
+                        role="progressbar"
+                        aria-label={`Petugas ${duty.activityName} yang sudah absen`}
+                        aria-valuenow={duty.percentage}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      >
+                        <i style={{ width: `${duty.percentage}%` }} />
+                      </div>
+                    </div>
+
+                    {duty.rows.length === 0 ? (
+                      <p className="dh-empty-small">Belum ada petugas terjadwal.</p>
+                    ) : (
+                      <ul className="dh-duty-roster">
+                        {duty.rows.map((row) => (
+                          <li key={`${duty.id}-${row.member.id}`}>
+                            <span className="dh-avatar" aria-hidden="true">
+                              {initials(row.member.full_name)}
+                            </span>
+                            <span className="dh-person">
+                              <strong>{row.member.full_name}</strong>
+                              <small>
+                                {personMeta(row.member)}
+                                {row.isSubstitution && row.replaces
+                                  ? ` · Pengganti ${row.replaces}`
+                                  : ""}
+                              </small>
+                            </span>
+                            {row.attendance ? (
+                              <span
+                                className={`dh-status is-${
+                                  ATTENDANCE_STATUS_STYLE[row.attendance.status] ?? "belum"
+                                }`}
+                              >
+                                {ATTENDANCE_STATUS_LABEL[row.attendance.status] ??
+                                  row.attendance.status}
+                              </span>
+                            ) : (
+                              <span className="dh-status is-belum">Belum scan</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="dh-panel" aria-labelledby="home-history-title">
+            <header className="dh-panel-head">
+              <div>
+                <p className="dh-panel-eyebrow">RIWAYAT SCAN</p>
+                <h2 className="dh-panel-title" id="home-history-title">Scan masuk hari ini</h2>
+              </div>
+              <Link href="/dashboard/attendance" className="dh-panel-link">
+                Lihat rekap →
+              </Link>
+            </header>
+
+            {attendances.length === 0 ? (
+              <div className="dh-empty">
+                <strong>Belum ada scan masuk hari ini</strong>
+                <span>{dateLabel} — riwayat akan muncul otomatis saat kartu ditempel.</span>
+              </div>
+            ) : (
+              <div className="dh-table-wrap">
+                <table className="dh-table" aria-label="Riwayat scan hari ini">
+                  <thead>
+                    <tr>
+                      <th scope="col">Waktu</th>
+                      <th scope="col">Nama</th>
+                      <th scope="col">Kegiatan</th>
+                      <th scope="col" className="dh-col-method">Metode</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendances.map((record) => {
+                      const scanWib = getWibDateComponents(record.scan_time);
+                      return (
+                        <tr key={record.id}>
+                          <td>
+                            <time dateTime={record.scan_time.toISOString()}>
+                              {scanWib.timeWithSecondsStr}
+                            </time>
+                            {record.scan_count > 1 && (
+                              <small
+                                title={`Tap terakhir: ${getWibDateComponents(record.last_scan_at).timeWithSecondsStr} WIB`}
+                              >
+                                {record.scan_count}× tap
+                              </small>
+                            )}
+                          </td>
+                          <td>
+                            <strong>{record.member.full_name}</strong>
+                            <small>{personMeta(record.member)}</small>
+                          </td>
+                          <td>{record.schedule.activity.name}</td>
+                          <td className="dh-col-method">{record.method === "RFID" ? "RFID" : "Manual"}</td>
+                          <td>
+                            <span className="dh-table-actions">
+                              <span
+                                className={`dh-status is-${
+                                  ATTENDANCE_STATUS_STYLE[record.status] ?? "belum"
+                                }`}
+                              >
+                                {ATTENDANCE_STATUS_LABEL[record.status] ?? record.status}
+                              </span>
+                              {canCorrect && (
+                                <Link
+                                  href={`/dashboard/attendance/${record.id}`}
+                                  className="dh-row-link"
+                                >
+                                  Koreksi
+                                </Link>
+                              )}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <p className="dh-footnote">
+              Status “Di luar jam” berarti kartu ditempel di luar jendela piket. Koreksi status
+              dilakukan pengurus melalui rekap presensi.
+            </p>
+          </section>
+        </div>
+
+        <aside className="dh-col">
+          <section className="dh-panel" aria-labelledby="home-calendar-title">
+            <header className="dh-panel-head">
+              <div>
+                <p className="dh-panel-eyebrow">KALENDER</p>
+                <h2 className="dh-panel-title" id="home-calendar-title">Jadwal bulan ini</h2>
+              </div>
+              <span className="dh-panel-note">{cycleLabel}</span>
+            </header>
+
+            <div className="dh-cal-head">
+              <span className="dh-cal-month">{monthLabel}</span>
+              <span className="dh-cal-sub">{numberFormat.format(dutyCards.length)} piket hari ini</span>
+            </div>
+
+            <div className="dh-cal" aria-label={`Kalender ${monthLabel}, hari ini tanggal ${wibDay}`}>
+              {WEEKDAY_SHORT.map((day) => (
+                <span key={day} className="dh-cal-dow">{day}</span>
+              ))}
+              {calendarCells.map((day, index) =>
+                day === null ? (
+                  <span key={`blank-${index}`} className="dh-cal-day is-empty" aria-hidden="true" />
+                ) : (
+                  <span
+                    key={`day-${day}`}
+                    className={`dh-cal-day${day === wibDay ? " is-today" : ""}`}
+                    aria-current={day === wibDay ? "date" : undefined}
+                  >
+                    {day}
+                  </span>
+                )
               )}
             </div>
-          ) : (
-            <div className="home-duty-grid">
-              {dutyCards.map((duty) => (
-                <article className="home-duty" key={duty.id}>
-                  <header className="home-duty-head">
-                    <div>
-                      <h3>{duty.activityName}</h3>
-                      <p>
-                        {duty.startTime}–{duty.cutoffTime} WIB
-                      </p>
-                    </div>
-                    <span className={`home-duty-state is-${duty.state}`}>
-                      {duty.state === "live"
-                        ? "Berlangsung"
-                        : duty.state === "soon"
-                          ? "Belum mulai"
-                          : "Selesai"}
-                    </span>
-                  </header>
+          </section>
 
-                  <div className="home-duty-progress">
-                    <div className="home-duty-progress-copy">
-                      <span>
-                        {duty.scannedCount} dari {duty.total} petugas sudah absen
-                      </span>
-                      <strong>{duty.percentage}%</strong>
-                    </div>
-                    <div
-                      className="home-duty-track"
-                      role="progressbar"
-                      aria-label={`Petugas ${duty.activityName} yang sudah absen`}
-                      aria-valuenow={duty.percentage}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    >
-                      <i style={{ width: `${duty.percentage}%` }} />
-                    </div>
-                  </div>
+          <section className="dh-panel" aria-labelledby="home-system-title">
+            <header className="dh-panel-head">
+              <div>
+                <p className="dh-panel-eyebrow">STATUS SISTEM</p>
+                <h2 className="dh-panel-title" id="home-system-title">Kesiapan</h2>
+              </div>
+              <span className={`home-pill ${scanReady ? "is-ok" : "is-warn"}`}>
+                {scanReady ? "Siap" : "Perlu persiapan"}
+              </span>
+            </header>
 
-                  {duty.rows.length === 0 ? (
-                    <p className="home-empty-small">Belum ada petugas terjadwal.</p>
-                  ) : (
-                    <ul className="home-roster">
-                      {duty.rows.map((row) => (
-                        <li key={`${duty.id}-${row.member.id}`}>
-                          <span className="home-avatar" aria-hidden="true">
-                            {initials(row.member.full_name)}
-                          </span>
-                          <span className="home-person">
-                            <strong>{row.member.full_name}</strong>
-                            <small>
-                              {personMeta(row.member)}
-                              {row.isSubstitution && row.replaces
-                                ? ` · Pengganti ${row.replaces}`
-                                : ""}
-                            </small>
-                          </span>
-                          {row.attendance ? (
-                            <span
-                              className={`home-status is-${
-                                ATTENDANCE_STATUS_STYLE[row.attendance.status] ?? "belum"
-                              }`}
-                            >
-                              {ATTENDANCE_STATUS_LABEL[row.attendance.status] ??
-                                row.attendance.status}
-                            </span>
-                          ) : (
-                            <span className="home-status is-belum">Belum scan</span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+            <ul className="dh-task-list">
+              <TaskRow
+                tone="is-mint"
+                title={`${numberFormat.format(membersWithRfid)}/${numberFormat.format(activeMembers)} anggota punya UID`}
+                detail={`Cakupan kartu RFID ${rfidCoverage}%`}
+                href={canManage ? "/dashboard/members" : undefined}
+              >
+                <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20M6 15h4" /></svg>
+              </TaskRow>
 
-        <aside className="home-panel" aria-labelledby="home-system-title">
-          <header className="home-panel-head">
-            <div>
-              <p className="home-eyebrow">STATUS SISTEM</p>
-              <h2 id="home-system-title">Kesiapan</h2>
-            </div>
-            <span className={`home-pill ${scanReady ? "is-ok" : "is-warn"}`}>
-              {scanReady ? "Siap" : "Perlu persiapan"}
-            </span>
-          </header>
+              <TaskRow
+                tone={activeDevices > 0 ? "is-lav" : "is-pink"}
+                title={
+                  activeDevices > 0
+                    ? `${numberFormat.format(activeDevices)} perangkat aktif`
+                    : "Perangkat belum terdaftar"
+                }
+                detail="ESP32 + pembaca RC522"
+                href={canManage ? "/dashboard/devices" : undefined}
+              >
+                <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2" /><path d="M10 3v4m4-4v4m-4 10v4m4-4v4M3 10h4m-4 4h4m10-4h4m-4 4h4" /></svg>
+              </TaskRow>
 
-          <ul className="home-check-list">
-            <li>
-              <span className={`home-check ${membersWithRfid > 0 ? "is-done" : ""}`}>
-                {membersWithRfid > 0 ? "✓" : "–"}
-              </span>
-              <span>
-                {numberFormat.format(membersWithRfid)} dari {numberFormat.format(activeMembers)} anggota
-                punya UID kartu ({rfidCoverage}%)
-              </span>
-            </li>
-            <li>
-              <span className={`home-check ${activeDevices > 0 ? "is-done" : ""}`}>
-                {activeDevices > 0 ? "✓" : "–"}
-              </span>
-              <span>
-                {activeDevices > 0
-                  ? `${numberFormat.format(activeDevices)} perangkat aktif`
-                  : "Perangkat ESP32 belum didaftarkan"}
-              </span>
-            </li>
-            <li>
-              <span className={`home-check ${cycleStatus?.configured ? "is-done" : ""}`}>
-                {cycleStatus?.configured ? "✓" : "–"}
-              </span>
-              <span>
-                {cycleStatus?.configured
-                  ? `Siklus dimulai ${cycleStatus.cycle_start_date}`
-                  : "Tanggal mulai siklus belum diatur"}
-              </span>
-            </li>
-            <li>
-              <span className={`home-check ${dutyCards.length > 0 ? "is-done" : ""}`}>
-                {dutyCards.length > 0 ? "✓" : "–"}
-              </span>
-              <span>
-                {dutyCards.length > 0
-                  ? `${numberFormat.format(dutyCards.length)} jadwal piket aktif hari ini`
-                  : "Belum ada jadwal piket hari ini"}
-              </span>
-            </li>
-          </ul>
+              <TaskRow
+                tone={cycleStatus?.configured ? "is-cream" : "is-pink"}
+                title={
+                  cycleStatus?.configured
+                    ? `Siklus mulai ${cycleStatus.cycle_start_date}`
+                    : "Tanggal siklus belum diatur"
+                }
+                detail={cycleLabel}
+                href={canManage ? "/dashboard/settings/cycle" : undefined}
+              >
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+              </TaskRow>
 
-          {user.role === "SUPERADMIN" && (
-            <div className="home-actions">
-              <Link href="/dashboard/members" className="overview-primary-action">Kelola UID anggota</Link>
-              <Link href="/dashboard/devices" className="overview-secondary-action">Perangkat</Link>
-              <Link href="/dashboard/duty/sapa-pagi" className="overview-secondary-action">Jadwal</Link>
-            </div>
-          )}
+              <TaskRow
+                tone="is-lav"
+                title={`${numberFormat.format(dutyCards.length)} jadwal piket hari ini`}
+                detail={`Hari ${dayLabel} · ${wib.timeStr} WIB`}
+                href={canManage ? "/dashboard/duty/sapa-pagi" : undefined}
+              >
+                <svg viewBox="0 0 24 24"><path d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2m3 10h3m-3 4h7" /></svg>
+              </TaskRow>
+            </ul>
+          </section>
         </aside>
       </div>
-
-      <section className="home-panel" aria-labelledby="home-history-title">
-        <header className="home-panel-head">
-          <div>
-            <p className="home-eyebrow">RIWAYAT SCAN</p>
-            <h2 id="home-history-title">Scan masuk hari ini</h2>
-          </div>
-          <Link href="/dashboard/attendance" className="home-link">
-            Lihat rekap lengkap →
-          </Link>
-        </header>
-
-        {attendances.length === 0 ? (
-          <div className="home-empty">
-            <strong>Belum ada scan masuk hari ini</strong>
-            <span>{dateLabel} — riwayat akan muncul otomatis saat kartu ditempel.</span>
-          </div>
-        ) : (
-          <div className="home-table-wrap">
-            <table className="home-table" aria-label="Riwayat scan hari ini">
-              <thead>
-                <tr>
-                  <th scope="col">Waktu</th>
-                  <th scope="col">Nama</th>
-                  <th scope="col">Kegiatan</th>
-                  <th scope="col" className="home-col-method">Metode</th>
-                  <th scope="col">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attendances.map((record) => {
-                  const scanWib = getWibDateComponents(record.scan_time);
-                  return (
-                    <tr key={record.id}>
-                      <td>
-                        <time dateTime={record.scan_time.toISOString()}>
-                          {scanWib.timeWithSecondsStr}
-                        </time>
-                        {record.scan_count > 1 && (
-                          <small
-                            title={`Tap terakhir: ${getWibDateComponents(record.last_scan_at).timeWithSecondsStr} WIB`}
-                          >
-                            {record.scan_count}× tap
-                          </small>
-                        )}
-                      </td>
-                      <td>
-                        <strong>{record.member.full_name}</strong>
-                        <small>{personMeta(record.member)}</small>
-                      </td>
-                      <td>{record.schedule.activity.name}</td>
-                      <td className="home-col-method">{record.method === "RFID" ? "RFID" : "Manual"}</td>
-                      <td>
-                        <span className="home-status-cell">
-                          <span
-                            className={`home-status is-${
-                              ATTENDANCE_STATUS_STYLE[record.status] ?? "belum"
-                            }`}
-                          >
-                            {ATTENDANCE_STATUS_LABEL[record.status] ?? record.status}
-                          </span>
-                          {canCorrect && (
-                            <Link
-                              href={`/dashboard/attendance/${record.id}`}
-                              className="home-row-action"
-                            >
-                              Koreksi
-                            </Link>
-                          )}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <p className="home-footnote">
-          Status “Di luar jam” berarti kartu ditempel di luar jendela piket. Koreksi status dilakukan
-          pengurus melalui rekap presensi.
-        </p>
-      </section>
     </main>
   );
 }
