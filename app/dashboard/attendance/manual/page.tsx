@@ -9,6 +9,10 @@ import { getWibDateComponents } from "@/lib/utils/duty-cycle";
 import { parseDateOnlyToUtc } from "@/lib/utils/timezone";
 import { getCycleStatus } from "@/lib/services/duty.service";
 import {
+  applyCycleWeekOffset,
+  getActivityWeekOffsets,
+} from "@/lib/services/activity-week.service";
+import {
   ATTENDANCE_STATUS_LABEL,
   ATTENDANCE_STATUS_STYLE,
 } from "@/lib/utils/attendance-status";
@@ -106,18 +110,29 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
   const cycleWeek =
     cycle && cycle.configured && "cycle_week" in cycle ? cycle.cycle_week : null;
 
-  // Prefill jam sesi dari jadwal piket pada hari & minggu siklus yang sama.
+  // Prefill jam sesi dari jadwal piket pada hari & minggu efektif kegiatan.
   const dutyDefaults: Record<string, { start: string; late: string; end: string }> = {};
   if (cycleWeek) {
-    const duties = await prisma.dutySchedule.findMany({
-      where: { is_active: true, day_of_week: dayOfWeek, cycle_week: cycleWeek },
-      select: {
-        activity_id: true,
-        start_time_wib: true,
-        cutoff_time_wib: true,
-      },
-    });
+    const [weekOffsets, duties] = await Promise.all([
+      getActivityWeekOffsets(),
+      prisma.dutySchedule.findMany({
+        where: { is_active: true, day_of_week: dayOfWeek },
+        select: {
+          activity_id: true,
+          cycle_week: true,
+          start_time_wib: true,
+          cutoff_time_wib: true,
+          activity: { select: { code: true } },
+        },
+      }),
+    ]);
+
     for (const duty of duties) {
+      const effectiveWeek = applyCycleWeekOffset(
+        cycleWeek,
+        weekOffsets.get(duty.activity.code.toUpperCase()) ?? 0
+      );
+      if (effectiveWeek !== duty.cycle_week) continue;
       dutyDefaults[duty.activity_id] = {
         start: duty.start_time_wib,
         end: addMinutes(duty.cutoff_time_wib, 30),

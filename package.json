@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --env-file-if-exists=.env --test tests/auth.test.ts tests/auth-db.test.ts tests/member-org.test.ts tests/activity-schedule.test.ts tests/attendance.test.ts tests/device-iot.test.ts tests/automatic-attendance.test.ts tests/report.test.ts tests/xlsx.test.ts tests/roster-import.test.ts",
+    "test": "tsx --env-file-if-exists=.env --test tests/auth.test.ts tests/auth-db.test.ts tests/member-org.test.ts tests/activity-schedule.test.ts tests/attendance.test.ts tests/device-iot.test.ts tests/automatic-attendance.test.ts tests/report.test.ts tests/xlsx.test.ts tests/roster-import.test.ts tests/activity-week.test.ts",
     "postinstall": "prisma generate",
     "setup:superadmin": "tsx --env-file-if-exists=.env scripts/setup-superadmin.ts",
     "import:roster": "tsx --env-file-if-exists=.env scripts/import-roster.ts",
-    "import:danusan": "tsx --env-file-if-exists=.env scripts/import-roster.ts --input scripts/roster-danusan-2026.json --activity DANUSAN"
+    "import:danusan": "tsx --env-file-if-exists=.env scripts/import-roster.ts --input scripts/roster-danusan-2026.json --activity DANUSAN",
+    "set:week-offset": "tsx --env-file-if-exists=.env scripts/set-activity-week-offset.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

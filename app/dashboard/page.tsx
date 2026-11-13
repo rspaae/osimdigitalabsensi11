@@ -6,6 +6,11 @@ import { getSessionUser } from "@/lib/auth/context";
 import { canAccessModule } from "@/lib/auth/rbac";
 import { AppModule, PermissionAction } from "@/types/auth";
 import { getCycleStatus } from "@/lib/services/duty.service";
+import {
+  applyCycleWeekOffset,
+  getActivityWeekOffsets,
+  weekLabel,
+} from "@/lib/services/activity-week.service";
 import { prisma } from "@/lib/db/prisma";
 import { getWibDateComponents } from "@/lib/utils/duty-cycle";
 import { parseDateOnlyToUtc } from "@/lib/utils/timezone";
@@ -111,13 +116,14 @@ export default async function DashboardPage() {
       ? cycleStatus.cycle_week
       : null;
 
-  const [dutySchedules, substitutions, attendances, activeMembers, membersWithRfid, activeDevices] =
+  const [weekOffsets, dutySchedules, substitutions, attendances, activeMembers, membersWithRfid, activeDevices] =
     await Promise.all([
+      getActivityWeekOffsets(),
       prisma.dutySchedule.findMany({
         where: {
           is_active: true,
           ...(cycleWeek
-            ? { cycle_week: cycleWeek, day_of_week: wib.dayOfWeek }
+            ? { day_of_week: wib.dayOfWeek }
             : { id: { in: [] } }),
         },
         include: {
@@ -171,6 +177,18 @@ export default async function DashboardPage() {
       prisma.device.count({ where: { is_active: true } }),
     ]);
 
+  // Minggu efektif per kegiatan: kegiatan dengan offset (mis. Danusan) bisa
+  // memakai minggu kebalikan dari siklus global pada hari yang sama.
+  const effectiveDutySchedules = cycleWeek
+    ? dutySchedules.filter(
+        (schedule) =>
+          applyCycleWeekOffset(
+            cycleWeek,
+            weekOffsets.get(schedule.activity.code.toUpperCase()) ?? 0
+          ) === schedule.cycle_week
+      )
+    : [];
+
   // Absensi per (jadwal piket, anggota) untuk menentukan status tiap petugas.
   const attendanceByDutyMember = new Map<
     string,
@@ -185,7 +203,7 @@ export default async function DashboardPage() {
     }
   }
 
-  const dutyCards = dutySchedules.map((duty) => {
+  const dutyCards = effectiveDutySchedules.map((duty) => {
     const rows = duty.roster_members.map((entry) => ({
       member: entry.member,
       isSubstitution: false,
@@ -235,6 +253,7 @@ export default async function DashboardPage() {
     return {
       id: duty.id,
       activityName: duty.activity.name,
+      weekLabel: weekLabel(duty.cycle_week),
       startTime: duty.start_time_wib,
       cutoffTime: duty.cutoff_time_wib,
       state,
@@ -464,7 +483,7 @@ export default async function DashboardPage() {
                       <div>
                         <h3 className="dh-duty-name">{duty.activityName}</h3>
                         <p className="dh-duty-time">
-                          {duty.startTime}–{duty.cutoffTime} WIB
+                          {duty.startTime}–{duty.cutoffTime} WIB · {duty.weekLabel}
                         </p>
                       </div>
                       <span className="dh-duty-badge">

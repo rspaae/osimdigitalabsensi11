@@ -130,6 +130,16 @@ npx tsx scripts/import-roster.ts --input scripts/roster-danusan.json --activity 
 
 Data terbaru tersimpan di `scripts/roster-danusan-2026.json` (69 penugasan: Minggu 1 dan 2, Senin–Jumat; Jumat Minggu 2 berisi 6 orang). Delapan nama pada daftar sumber memiliki ejaan berbeda dengan database dan sudah dipetakan eksplisit lewat `db_name`.
 
+**Offset minggu Danusan:** Danusan memakai rotasi minggu yang berbeda dari siklus global. Offset disimpan di `SystemSetting` `activity_week_offset:DANUSAN = 1`, artinya saat siklus global `WEEK_1` jadwal Danusan yang aktif adalah `WEEK_2` (dan sebaliknya), sementara Sapa Pagi tetap mengikuti siklus global. Scan RFID, dashboard, dan prefill input manual sudah menghormati offset ini.
+
+```powershell
+# Lihat minggu efektif semua kegiatan hari ini
+npm run set:week-offset -- --list
+
+# Set Danusan memakai minggu kebalikan siklus global
+npm run set:week-offset -- --activity DANUSAN --offset 1
+```
+
 ```powershell
 # Simulasi
 npm run import:danusan -- --dry-run

@@ -5,6 +5,7 @@ import {
   AttendanceMethod,
   ScheduleStatus,
   SubstitutionStatus,
+  CycleWeek,
 } from "@prisma/client";
 import { authenticateDevice } from "./device-auth.service";
 import {
@@ -23,6 +24,10 @@ import {
   getWibDateComponents,
   calculateCycleWeek,
 } from "@/lib/utils/duty-cycle";
+import {
+  applyCycleWeekOffset,
+  getActivityWeekOffsets,
+} from "./activity-week.service";
 
 function addMinutesToTime(timeStr: string, minutesToAdd: number): string {
   const [h, m] = timeStr.split(":").map(Number);
@@ -105,10 +110,12 @@ export async function recordRfidAttendance(
 
   const { cycleWeek } = calculateCycleWeek(now, cycleSetting.value);
 
-  // 5. Cari jadwal piket (DutySchedule) yang aktif untuk cycle_week dan day_of_week hari ini
-  const todayDutySchedules = await prisma.dutySchedule.findMany({
+  // 5. Cari jadwal piket hari ini untuk minggu efektif MASING-MASING kegiatan.
+  // Kegiatan dengan offset 1 (mis. Danusan) memakai minggu kebalikan siklus global.
+  const weekOffsets = await getActivityWeekOffsets();
+  const dayDutySchedules = await prisma.dutySchedule.findMany({
     where: {
-      cycle_week: cycleWeek,
+      cycle_week: { in: [CycleWeek.WEEK_1, CycleWeek.WEEK_2] },
       day_of_week: dayOfWeek,
       is_active: true,
     },
@@ -117,6 +124,14 @@ export async function recordRfidAttendance(
       roster_members: true,
     },
   });
+
+  const todayDutySchedules = dayDutySchedules.filter(
+    (schedule) =>
+      applyCycleWeekOffset(
+        cycleWeek,
+        weekOffsets.get(schedule.activity.code.toUpperCase()) ?? 0
+      ) === schedule.cycle_week
+  );
 
   // Jendela sesi normal: start_time hingga grace period 30 menit setelah cutoff.
   // Jadwal di luar jendela ini tetap dapat menerima scan (dicatat sebagai DI_LUAR_JADWAL).

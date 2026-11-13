@@ -106,6 +106,7 @@ Buka `http://localhost:3000`, login di `/login`. Cek kesehatan sistem di `/api/h
 | `npm run setup:superadmin` | Inisialisasi akun Superadmin pertama |
 | `npm run import:roster` | Impor roster piket dari JSON (lihat `docs/roster-import-guide.md`) |
 | `npm run import:danusan` | Impor roster Danusan 2026 (`scripts/roster-danusan-2026.json`) |
+| `npm run set:week-offset` | Atur offset minggu per kegiatan (mis. `-- --activity DANUSAN --offset 1`) |
 
 Pemeriksaan tipe: `npx tsc --noEmit`.
 
@@ -194,4 +195,5 @@ Panduan lengkap: [docs/iot-device-setup.md](docs/iot-device-setup.md).
 - Laporan kehadiran hanya menghitung sesi `OPEN`/`CLOSED`; persentase = (`HADIR` + `TERLAMBAT`) ÷ jumlah sesi × 100, dan sesi tanpa rekaman ditampilkan pada kolom "Belum".
 - Ekspor `.xlsx` dibuat langsung di server tanpa dependensi eksternal (`lib/utils/xlsx.ts`), berisi sheet `Kehadiran` (header beku + auto-filter) dan `Info` (parameter laporan).
 - Presensi manual memakai jam mulai sesi sebagai `scan_time` (bukan jam input) agar rekap per tanggal tetap konsisten saat data diisi untuk tanggal sebelumnya.
+- Kegiatan dapat memakai minggu siklus berbeda dari siklus global melalui `SystemSetting` `activity_week_offset:<KODE>` (`0` = ikut global, `1` = kebalikan). Saat ini `DANUSAN` diset `1` sehingga berjalan Minggu 2 ketika siklus global Minggu 1, sedangkan `SAPA_PAGI` tetap mengikuti global. Offset dipakai oleh scan RFID, dashboard, dan prefill input manual.
 - Test suite bersifat simulasi logika murni (tanpa DB), sehingga tidak menggantikan pengujian end-to-end terhadap service + database.
