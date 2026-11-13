@@ -5041,6 +5041,413 @@ body {
   }
 }
 
+/* ============================================================================
+   RESPONSIF — TABLET & MOBILE
+   ============================================================================ */
+
+/* Tablet: chrome halaman mulai dilipat */
+@media (max-width: 900px) {
+  .settings-breadcrumb {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .settings-page-title-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 8px;
+  }
+
+  .member-list-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rekap-head-actions,
+  .report-actions {
+    flex-wrap: wrap;
+  }
+
+  .device-monitor table {
+    min-width: 640px;
+  }
+}
+
+@media (max-width: 760px) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+
+  body {
+    background-attachment: scroll;
+  }
+
+  .dashboard-main-content {
+    padding-right: 14px;
+    padding-left: 14px;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
+  }
+
+  .dashboard-nav {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+  }
+
+  .dashboard-nav-link {
+    min-height: 40px;
+    scroll-snap-align: start;
+  }
+
+  .dashboard-sidebar {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .settings-page-title {
+    font-size: clamp(19px, 5.6vw, 26px);
+    line-height: 1.2;
+  }
+
+  .settings-page-desc {
+    font-size: 11.5px;
+  }
+
+  .settings-page-header {
+    padding-bottom: 14px;
+  }
+
+  .member-form-card,
+  .member-list-card,
+  .cycle-status-card,
+  .cycle-form-card {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .overview-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-metric-card {
+    min-height: 108px;
+    padding: 13px 14px;
+  }
+
+  .overview-metric-symbol {
+    display: none;
+  }
+
+  .report-sheet {
+    padding: 18px 14px 16px;
+    border-radius: 16px;
+  }
+
+  .report-kop {
+    padding-bottom: 12px;
+  }
+
+  .report-title {
+    font-size: 15px;
+  }
+
+  .report-meta {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .report-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .report-actions {
+    width: 100%;
+  }
+
+  .report-table {
+    min-width: 700px;
+  }
+
+  .manual-toolbar {
+    padding: 12px 14px;
+  }
+
+  .manual-summary {
+    width: 100%;
+    margin-left: 0;
+    padding-bottom: 0;
+  }
+
+  .manual-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-field-member {
+    grid-column: auto;
+  }
+
+  .manual-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .manual-create {
+    padding: 0 14px;
+  }
+
+  .manual-records {
+    min-width: 0;
+  }
+
+  .duty-day-card {
+    padding: 14px;
+  }
+
+  .duty-add-member-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .duty-select-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .duty-btn-add {
+    width: 100%;
+  }
+
+  .member-rfid-editor {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .correction-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dh-panel {
+    padding: 16px 14px;
+  }
+
+  .dh-hero {
+    padding: 20px 18px;
+  }
+
+  .dh-hero-meta {
+    gap: 6px;
+  }
+
+  .dh-hero-chip {
+    font-size: 9.5px;
+  }
+
+  .dh-duty-roster {
+    max-height: none;
+  }
+
+  .member-table:not(.table-stack),
+  .duty-student-list {
+    min-width: 620px;
+  }
+
+  .dh-table:not(.table-stack) {
+    min-width: 560px;
+  }
+}
+
+/* Mobile: target sentuh, anti-zoom iOS, dan tabel menjadi kartu */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .field-input,
+  .cycle-field-input,
+  .report-field input,
+  .report-field select,
+  .manual-form input,
+  .manual-form select,
+  .member-rfid-input,
+  .duty-select-input {
+    min-height: 42px;
+  }
+
+  .report-field input,
+  .report-field select {
+    height: 42px;
+  }
+
+  .submit-button,
+  .report-btn,
+  .cycle-submit-btn,
+  .duty-btn-add,
+  .overview-primary-action,
+  .overview-secondary-action,
+  .member-rfid-save {
+    min-height: 42px;
+  }
+
+  .login-page {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+
+  /* Tabel utama tampil sebagai kartu bertumpuk agar tidak perlu geser horizontal */
+  .table-stack {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table-stack thead {
+    display: none;
+  }
+
+  .table-stack tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  .table-stack tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding: 12px 13px;
+    border: 1px solid var(--ui-line, #e7eefb);
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .table-stack td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 0;
+    border: 0 !important;
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .table-stack td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: var(--ui-faint, #95a2bb);
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 0.06em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .table-stack td > * {
+    min-width: 0;
+  }
+
+  .table-stack td[data-label="No"] {
+    display: none;
+  }
+
+  .table-stack td[data-label="Nama"],
+  .table-stack td[data-label="Nama anggota"] {
+    order: -1;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .table-stack td[data-label="Nama"]::before,
+  .table-stack td[data-label="Nama anggota"]::before {
+    display: none;
+  }
+
+  .table-stack td[data-label="Nama anggota"] > div {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .table-stack tbody tr:hover {
+    background: #fff;
+  }
+
+  .member-table-wrap:has(.table-stack),
+  .dh-table-wrap:has(.table-stack),
+  .manual-records-wrap:has(.table-stack) {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .settings-role-badge {
+    align-self: flex-start;
+  }
+
+  .dashboard-role-pill {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .overview-metrics,
+  .dh-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .report-actions .report-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .manual-form-actions .report-btn,
+  .cycle-form-actions .cycle-submit-btn {
+    width: 100%;
+  }
+
+  .manual-toolbar > .report-btn {
+    width: 100%;
+  }
+
+  .dashboard-nav-link {
+    font-size: 9.5px;
+    padding: 0 8px;
+  }
+
+  .topbar-avatar {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 360px) {
+  .overview-metrics,
+  .dh-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Hormati preferensi pengguna yang meminta animasi minimal */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ------------------------------------------------------------ PRINT (A4) -- */
 @media print {
   @page {

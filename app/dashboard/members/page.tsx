@@ -63,7 +63,7 @@ export default async function MembersPage() {
             <p className="member-empty-state">Belum ada anggota terdaftar.</p>
           ) : (
             <div className="member-table-wrap">
-              <table className="member-table">
+              <table className="member-table table-stack">
                 <thead>
                   <tr>
                     <th scope="col">Nama</th>
@@ -75,16 +75,16 @@ export default async function MembersPage() {
                 <tbody>
                   {result.members.map((member) => (
                     <tr key={member.id}>
-                      <td>{member.full_name}</td>
-                      <td>{member.organization_type}</td>
-                      <td>
+                      <td data-label="Nama">{member.full_name}</td>
+                      <td data-label="Organisasi">{member.organization_type}</td>
+                      <td data-label="RFID">
                         <MemberRfidEditor
                           memberId={member.id}
                           currentUid={member.rfid_uid}
                           memberName={member.full_name}
                         />
                       </td>
-                      <td>{member.status}</td>
+                      <td data-label="Status">{member.status}</td>
                     </tr>
                   ))}
                 </tbody>

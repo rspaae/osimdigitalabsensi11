@@ -553,7 +553,7 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <div className="dh-table-wrap">
-                <table className="dh-table" aria-label="Riwayat scan hari ini">
+                <table className="dh-table table-stack" aria-label="Riwayat scan hari ini">
                   <thead>
                     <tr>
                       <th scope="col">Waktu</th>
@@ -568,7 +568,7 @@ export default async function DashboardPage() {
                       const scanWib = getWibDateComponents(record.scan_time);
                       return (
                         <tr key={record.id}>
-                          <td>
+                          <td data-label="Waktu">
                             <time dateTime={record.scan_time.toISOString()}>
                               {scanWib.timeWithSecondsStr}
                             </time>
@@ -580,13 +580,13 @@ export default async function DashboardPage() {
                               </small>
                             )}
                           </td>
-                          <td>
+                          <td data-label="Nama">
                             <strong>{record.member.full_name}</strong>
                             <small>{personMeta(record.member)}</small>
                           </td>
-                          <td>{record.schedule.activity.name}</td>
-                          <td className="dh-col-method">{record.method === "RFID" ? "RFID" : "Manual"}</td>
-                          <td>
+                          <td data-label="Kegiatan">{record.schedule.activity.name}</td>
+                          <td data-label="Metode" className="dh-col-method">{record.method === "RFID" ? "RFID" : "Manual"}</td>
+                          <td data-label="Status">
                             <span className="dh-table-actions">
                               <span
                                 className={`dh-status is-${

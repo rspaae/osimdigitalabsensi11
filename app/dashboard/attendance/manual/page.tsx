@@ -229,7 +229,7 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
                   <p className="manual-empty-records">Belum ada rekaman pada sesi ini.</p>
                 ) : (
                   <div className="manual-records-wrap">
-                    <table className="manual-records">
+                    <table className="manual-records table-stack">
                       <thead>
                         <tr>
                           <th scope="col">Nama</th>
@@ -243,9 +243,9 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
                       <tbody>
                         {session.records.map((record) => (
                           <tr key={record.id}>
-                            <td>{record.memberName}</td>
-                            <td>{record.classGrade ?? "—"}</td>
-                            <td>
+                            <td data-label="Nama">{record.memberName}</td>
+                            <td data-label="Kelas">{record.classGrade ?? "—"}</td>
+                            <td data-label="Status">
                               <span
                                 className={`dh-status is-${
                                   ATTENDANCE_STATUS_STYLE[record.status] ?? "belum"
@@ -254,9 +254,9 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
                                 {ATTENDANCE_STATUS_LABEL[record.status] ?? record.status}
                               </span>
                             </td>
-                            <td>{record.method === "RFID" ? "RFID" : "Manual"}</td>
-                            <td className="manual-time">{record.time}</td>
-                            <td>{record.notes ?? "—"}</td>
+                            <td data-label="Metode">{record.method === "RFID" ? "RFID" : "Manual"}</td>
+                            <td data-label="Waktu" className="manual-time">{record.time}</td>
+                            <td data-label="Catatan">{record.notes ?? "—"}</td>
                           </tr>
                         ))}
                       </tbody>

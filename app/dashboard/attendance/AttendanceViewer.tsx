@@ -166,7 +166,7 @@ export default function AttendanceViewer({ initialRecords, selectedDate, canCorr
           </div>
         ) : (
           <div className="member-table-wrap">
-            <table className="member-table">
+            <table className="member-table table-stack">
               <thead>
                 <tr>
                   <th scope="col" style={{ width: 50 }}>No</th>
@@ -199,8 +199,8 @@ export default function AttendanceViewer({ initialRecords, selectedDate, canCorr
 
                   return (
                     <tr key={item.id}>
-                      <td style={{ color: "var(--text-muted)" }}>{index + 1}</td>
-                      <td>
+                      <td data-label="No" style={{ color: "var(--text-muted)" }}>{index + 1}</td>
+                      <td data-label="Jam scan">
                         <strong style={{ fontFamily: "monospace", fontSize: 13 }}>
                           {timeFormatted} WIB
                         </strong>
@@ -215,7 +215,7 @@ export default function AttendanceViewer({ initialRecords, selectedDate, canCorr
                           </small>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Nama anggota">
                         <div style={{ display: "flex", alignItems: "center" }}>
                           <span className="duty-student-avatar">{initial}</span>
                           <div>
@@ -228,21 +228,21 @@ export default function AttendanceViewer({ initialRecords, selectedDate, canCorr
                           </div>
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Organisasi">
                         <span className={item.member.organization_type === "MPK" ? "badge-org-mpk" : "badge-org-osis"}>
                           {item.member.organization_type}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Kelas / NIS">
                         {item.member.class_grade ?? "—"}
                         {item.member.nis && <small style={{ display: "block", color: "var(--text-muted)" }}>NIS: {item.member.nis}</small>}
                       </td>
-                      <td>
+                      <td data-label="Kegiatan">
                         <span style={{ fontSize: 12, fontWeight: 600 }}>
                           {item.activity_name}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Status">
                         <span className={`badge-status ${statusBadgeClass}`}>
                           {item.status === "DI_LUAR_JADWAL" ? "DI LUAR JADWAL" : item.status}
                         </span>
@@ -256,7 +256,7 @@ export default function AttendanceViewer({ initialRecords, selectedDate, canCorr
                           </Link>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Metode">
                         <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
                           {item.method === "RFID" ? "📡 RFID ESP32" : "✍️ Manual"}
                         </span>
