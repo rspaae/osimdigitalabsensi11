@@ -104,6 +104,8 @@ Buka `http://localhost:3000`, login di `/login`. Cek kesehatan sistem di `/api/h
 | `npm run lint` | ESLint |
 | `npm test` | 148 test (9 suite, logika murni tanpa koneksi DB) |
 | `npm run setup:superadmin` | Inisialisasi akun Superadmin pertama |
+| `npm run import:roster` | Impor roster piket dari JSON (lihat `docs/roster-import-guide.md`) |
+| `npm run import:danusan` | Impor roster Danusan 2026 (`scripts/roster-danusan-2026.json`) |
 
 Pemeriksaan tipe: `npx tsc --noEmit`.
 

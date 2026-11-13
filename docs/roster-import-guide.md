@@ -82,13 +82,15 @@ Buat file JSON dengan format berikut (lihat contoh: `scripts/roster-data.json.ex
 | Field  | Tipe   | Keterangan |
 |--------|--------|------------|
 | `nis`  | string | NIS anggota — opsional, diprioritaskan bila tersedia. |
-| `name` | string | Nama lengkap anggota — wajib jika NIS tidak ada. Pencocokan **case-insensitive, exact match**. |
+| `name` | string | Nama lengkap anggota — wajib jika NIS tidak ada. Pencocokan **case-insensitive, exact match** setelah normalisasi. |
+| `db_name` | string | Opsional. Nama persis di database bila ejaan pada daftar berbeda (mis. `Reza Maulana Dhabit` → `db_name: "Reza Maulana Dhabith"`). Tidak pernah menebak; harus ditulis eksplisit. |
+| `class_grade` | string | Opsional. Dipakai untuk memilih bila ada anggota bernama sama, dan untuk laporan hasil impor. |
 | `organization_type` | string | `OSIS` atau `MPK`; gunakan untuk menghindari anggota dengan nama sama dari organisasi berbeda. |
 | `week` | string | `WEEK_1` atau `WEEK_2` |
 | `day`  | string | `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY`, `SUNDAY` |
 
 > [!IMPORTANT]
-> Minimal salah satu dari `nis` atau `name` wajib ada. Script **tidak melakukan fuzzy matching** — jika tidak ada yang cocok, entri dilaporkan sebagai `UNMATCHED` dan dilewati.
+> Minimal salah satu dari `nis` atau `name` wajib ada. Script **tidak melakukan fuzzy matching** — jika tidak ada yang cocok, entri dilaporkan sebagai `UNMATCHED` dan dilewati. Normalisasi hanya menghapus karakter tak terlihat, spasi ganda, dan menyamakan apostrof; ejaan nama tetap harus sama.
 
 ---
 
@@ -119,6 +121,27 @@ npx tsx scripts/import-roster.ts --input scripts/roster-danusan.json --activity 
 | `--input <path>` | `scripts/roster-data.json` | Path file JSON roster |
 | `--activity <code>` | `SAPA_PAGI` | Kode aktivitas di database |
 | `--dry-run` | (tidak aktif) | Simulasi tanpa menyimpan ke database |
+| `--create-schedules` | (tidak aktif) | Membuat `DutySchedule` yang belum ada untuk kombinasi minggu/hari pada file |
+| `--start <HH:MM>` | `05:30` | Jam mulai untuk jadwal yang baru dibuat |
+| `--cutoff <HH:MM>` | `06:00` | Cutoff untuk jadwal yang baru dibuat |
+| `--replace` | (tidak aktif) | Menghapus roster lama **hanya pada jadwal yang dipakai file**, lalu mengisi ulang. Dibatalkan otomatis bila masih ada entri yang tidak cocok. |
+
+### Roster Danusan 2026
+
+Data terbaru tersimpan di `scripts/roster-danusan-2026.json` (69 penugasan: Minggu 1 dan 2, Senin–Jumat; Jumat Minggu 2 berisi 6 orang). Delapan nama pada daftar sumber memiliki ejaan berbeda dengan database dan sudah dipetakan eksplisit lewat `db_name`.
+
+```powershell
+# Simulasi
+npm run import:danusan -- --dry-run
+
+# Impor (idempoten)
+npm run import:danusan
+
+# Ganti total roster Danusan pada 10 jadwal tersebut
+npm run import:danusan -- --replace
+```
+
+10 jadwal `DutySchedule` Danusan (Minggu 1/2 × Senin–Jumat) sudah ada di database dengan jam `05:30–06:00` WIB. Script **tidak mengubah jam** jadwal yang sudah ada; gunakan `--create-schedules --start … --cutoff …` hanya bila ada jadwal yang benar-benar belum dibuat.
 
 ---
 
@@ -157,6 +180,9 @@ DAFTAR ANGGOTA TIDAK DITEMUKAN:
 ---
 
 ## Status Roster Saat Ini
+
+> [!NOTE]
+> Pada 13 November 2026, roster **Danusan 2026** (69 penugasan) diimpor ke database: Minggu 1 dan 2, Senin–Jumat, 7 orang per hari kecuali Jumat Minggu 2 (6 orang). Seluruh 69 entri cocok dengan 74 anggota yang ada; 8 di antaranya memakai `db_name` karena ejaan berbeda dengan database. Jam jadwal Danusan yang sudah ada adalah `05:30–06:00` WIB dan tidak diubah oleh proses impor. Kolom kelas anggota di database belum terisi, sehingga `class_grade` pada file baru dipakai untuk verifikasi.
 
 > [!WARNING]
 > Pada 8 November 2026, Railway telah berisi 74 anggota dari roster yang diberikan, 10 jadwal Sapa Pagi, dan 74 penugasan roster. Tanggal mulai siklus adalah 2026-11-09. UID RFID belum tersedia pada daftar nama dan belum ditautkan; absensi RFID baru dapat dipakai setelah setiap UID kartu dicatat pada anggota yang benar.
