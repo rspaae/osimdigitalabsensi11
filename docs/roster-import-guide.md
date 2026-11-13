@@ -128,7 +128,7 @@ npx tsx scripts/import-roster.ts --input scripts/roster-danusan.json --activity 
 
 ### Roster Danusan 2026
 
-Data terbaru tersimpan di `scripts/roster-danusan-2026.json` (69 penugasan: Minggu 1 dan 2, Senin–Jumat; Jumat Minggu 2 berisi 6 orang). Delapan nama pada daftar sumber memiliki ejaan berbeda dengan database dan sudah dipetakan eksplisit lewat `db_name`.
+Data terbaru tersimpan di `scripts/roster-danusan-2026.json` (70 penugasan: Minggu 1 dan 2, Senin–Jumat, 7 orang per hari). Delapan nama pada daftar sumber memiliki ejaan berbeda dengan database dan sudah dipetakan eksplisit lewat `db_name`.
 
 **Offset minggu Danusan:** Danusan memakai rotasi minggu yang berbeda dari siklus global. Offset disimpan di `SystemSetting` `activity_week_offset:DANUSAN = 1`, artinya saat siklus global `WEEK_1` jadwal Danusan yang aktif adalah `WEEK_2` (dan sebaliknya), sementara Sapa Pagi tetap mengikuti siklus global. Scan RFID, dashboard, dan prefill input manual sudah menghormati offset ini.
 
@@ -192,7 +192,7 @@ DAFTAR ANGGOTA TIDAK DITEMUKAN:
 ## Status Roster Saat Ini
 
 > [!NOTE]
-> Pada 13 November 2026, roster **Danusan 2026** (69 penugasan) diimpor ke database: Minggu 1 dan 2, Senin–Jumat, 7 orang per hari kecuali Jumat Minggu 2 (6 orang). Seluruh 69 entri cocok dengan 74 anggota yang ada; 8 di antaranya memakai `db_name` karena ejaan berbeda dengan database. Jam jadwal Danusan yang sudah ada adalah `05:30–06:00` WIB dan tidak diubah oleh proses impor. Kolom kelas anggota di database belum terisi, sehingga `class_grade` pada file baru dipakai untuk verifikasi.
+> Pada 13 November 2026, roster **Danusan 2026** (70 penugasan) diimpor ke database: Minggu 1 dan 2, Senin–Jumat, 7 orang per hari. Seluruh 70 entri cocok dengan 74 anggota yang ada; 8 di antaranya memakai `db_name` karena ejaan berbeda dengan database. Jam jadwal Danusan yang sudah ada adalah `05:30–06:00` WIB dan tidak diubah oleh proses impor. Kolom kelas anggota di database belum terisi, sehingga `class_grade` pada file baru dipakai untuk verifikasi.
 
 > [!WARNING]
 > Pada 8 November 2026, Railway telah berisi 74 anggota dari roster yang diberikan, 10 jadwal Sapa Pagi, dan 74 penugasan roster. Tanggal mulai siklus adalah 2026-11-09. UID RFID belum tersedia pada daftar nama dan belum ditautkan; absensi RFID baru dapat dipakai setelah setiap UID kartu dicatat pada anggota yang benar.

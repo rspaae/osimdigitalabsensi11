@@ -43,8 +43,8 @@ test("NAMA: pembandingan mengabaikan kapitalisasi", () => {
 // DATA ROSTER DANUSAN 2026
 // ============================================================================
 
-test("ROSTER: berisi 69 penugasan", () => {
-  assert.equal(roster.length, 69);
+test("ROSTER: berisi 70 penugasan", () => {
+  assert.equal(roster.length, 70);
 });
 
 test("ROSTER: setiap entri punya nama dan minggu/hari yang valid", () => {
@@ -64,7 +64,7 @@ test("ROSTER: setiap entri punya nama dan minggu/hari yang valid", () => {
   }
 });
 
-test("ROSTER: distribusi 7 orang per hari, Jumat minggu ke-2 hanya 6", () => {
+test("ROSTER: setiap hari berisi 7 orang (10 slot)", () => {
   const counts = new Map<string, number>();
   for (const entry of roster) {
     const key = `${entry.week}:${entry.day}`;
@@ -73,11 +73,31 @@ test("ROSTER: distribusi 7 orang per hari, Jumat minggu ke-2 hanya 6", () => {
 
   for (const week of ["WEEK_1", "WEEK_2"]) {
     for (const day of ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"]) {
-      const expected = week === "WEEK_2" && day === "FRIDAY" ? 6 : 7;
-      assert.equal(counts.get(`${week}:${day}`), expected, `${week} ${day}`);
+      assert.equal(counts.get(`${week}:${day}`), 7, `${week} ${day}`);
     }
   }
-  assert.equal([...counts.values()].reduce((total, value) => total + value, 0), 69);
+  assert.equal([...counts.values()].reduce((total, value) => total + value, 0), 70);
+});
+
+test("ROSTER: perbaikan penempatan Alena, Reza, dan Erika", () => {
+  const has = (name: string, week: string, day: string) =>
+    roster.some(
+      (entry) =>
+        normalizePersonName(entry.name ?? "") === normalizePersonName(name) &&
+        entry.week === week &&
+        entry.day === day
+    );
+
+  // Alena masuk Kamis Minggu 1 menggantikan Reza.
+  assert.equal(has("Alena Veyra Pramudita", "WEEK_1", "THURSDAY"), true);
+  assert.equal(has("Reza Maulana Dhabit", "WEEK_1", "THURSDAY"), false);
+
+  // Reza pindah ke Senin Minggu 2 menggantikan Erika.
+  assert.equal(has("Reza Maulana Dhabit", "WEEK_2", "MONDAY"), true);
+  assert.equal(has("Erika Febriyanti", "WEEK_2", "MONDAY"), false);
+
+  // Erika ditambahkan ke Jumat Minggu 2 (slot menjadi 7 orang).
+  assert.equal(has("Erika Febriyanti", "WEEK_2", "FRIDAY"), true);
 });
 
 test("ROSTER: tidak ada nama ganda pada satu hari", () => {

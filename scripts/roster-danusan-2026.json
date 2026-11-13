@@ -25,7 +25,7 @@
 
   { "name": "Nayla Saskia Zaini", "class_grade": "XI MP 1", "week": "WEEK_1", "day": "THURSDAY" },
   { "name": "Muhammad Azriel Setiawan", "class_grade": "XI AK 3", "week": "WEEK_1", "day": "THURSDAY" },
-  { "name": "Reza Maulana Dhabit", "db_name": "Reza Maulana Dhabith", "class_grade": "XI AK 2", "week": "WEEK_1", "day": "THURSDAY" },
+  { "name": "Alena Veyra Pramudita", "class_grade": "XI DKV 1", "week": "WEEK_1", "day": "THURSDAY" },
   { "name": "Cinta Maryamlia Abidin", "db_name": "Cinta Maryamalia Abidin", "class_grade": "XI AK 3", "week": "WEEK_1", "day": "THURSDAY" },
   { "name": "Dwi Warda Fajarina", "class_grade": "XI AK 3", "week": "WEEK_1", "day": "THURSDAY" },
   { "name": "Rafa Ramdani", "class_grade": "XI RPL 1", "week": "WEEK_1", "day": "THURSDAY" },
@@ -43,7 +43,7 @@
   { "name": "Salma Kinasih Pamilu", "class_grade": "XI BR 2", "week": "WEEK_2", "day": "MONDAY" },
   { "name": "Vanya Adriani Putri", "db_name": "Vanya Andriani Putri", "class_grade": "XI DKV 2", "week": "WEEK_2", "day": "MONDAY" },
   { "name": "Nayla Zaina Alesha", "class_grade": "XI BR 2", "week": "WEEK_2", "day": "MONDAY" },
-  { "name": "Erika Febriyanti", "class_grade": "XI AK 3", "week": "WEEK_2", "day": "MONDAY" },
+  { "name": "Reza Maulana Dhabit", "db_name": "Reza Maulana Dhabith", "class_grade": "XI AK 2", "week": "WEEK_2", "day": "MONDAY" },
   { "name": "Hasya Fakhri Hafizh", "db_name": "Hasyafakhri Hafizh", "class_grade": "XI RPL 2", "week": "WEEK_2", "day": "MONDAY" },
   { "name": "Dzaki Fairuz", "class_grade": "XI RPL 2", "week": "WEEK_2", "day": "MONDAY" },
 
@@ -72,9 +72,10 @@
   { "name": "Niar Almira Achmi", "class_grade": "XI MP 1", "week": "WEEK_2", "day": "THURSDAY" },
 
   { "name": "Hana Febriani", "class_grade": "XI MP 2", "week": "WEEK_2", "day": "FRIDAY" },
-  { "name": "Nakesha Rahayu Putri", "db_name": "Nakesha Putri Rahayu", "class_grade": null, "week": "WEEK_2", "day": "FRIDAY" },
+  { "name": "Nakesha Rahayu Putri", "db_name": "Nakesha Putri Rahayu", "class_grade": "XI DKV 2", "week": "WEEK_2", "day": "FRIDAY" },
   { "name": "Anadita Putri", "class_grade": "XI MP 2", "week": "WEEK_2", "day": "FRIDAY" },
   { "name": "Metha Khairinnisa", "class_grade": "XI MP 2", "week": "WEEK_2", "day": "FRIDAY" },
   { "name": "Natasya Devianti Ismayana", "class_grade": "XI MP 2", "week": "WEEK_2", "day": "FRIDAY" },
-  { "name": "Jeanny Wynnie Pratama", "class_grade": "XI TKJ", "week": "WEEK_2", "day": "FRIDAY" }
+  { "name": "Jeanny Wynnie Pratama", "class_grade": "XI TKJ", "week": "WEEK_2", "day": "FRIDAY" },
+  { "name": "Erika Febriyanti", "class_grade": "XI AK 3", "week": "WEEK_2", "day": "FRIDAY" }
 ]
