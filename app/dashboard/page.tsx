@@ -11,6 +11,10 @@ import {
   getActivityWeekOffsets,
   weekLabel,
 } from "@/lib/services/activity-week.service";
+import {
+  getCancellationReason,
+  isScheduleCancelled,
+} from "@/lib/utils/schedule-exception";
 import { prisma } from "@/lib/db/prisma";
 import { getWibDateComponents } from "@/lib/utils/duty-cycle";
 import { parseDateOnlyToUtc } from "@/lib/utils/timezone";
@@ -116,9 +120,13 @@ export default async function DashboardPage() {
       ? cycleStatus.cycle_week
       : null;
 
-  const [weekOffsets, dutySchedules, substitutions, attendances, activeMembers, membersWithRfid, activeDevices] =
+  const [weekOffsets, exceptionRows, dutySchedules, substitutions, attendances, activeMembers, membersWithRfid, activeDevices] =
     await Promise.all([
       getActivityWeekOffsets(),
+      prisma.scheduleException.findMany({
+        where: { date: todayDateUtc },
+        select: { activity_id: true, reason: true },
+      }),
       prisma.dutySchedule.findMany({
         where: {
           is_active: true,
@@ -189,6 +197,21 @@ export default async function DashboardPage() {
       )
     : [];
 
+  // Jadwal yang tanggalnya ditandai libur dikeluarkan dari statistik & kartu,
+  // lalu ditampilkan sebagai pemberitahuan terpisah.
+  const cancelledToday = effectiveDutySchedules
+    .filter((schedule) => isScheduleCancelled(exceptionRows, schedule.activity.id))
+    .map((schedule) => ({
+      id: schedule.id,
+      activityName: schedule.activity.name,
+      reason:
+        getCancellationReason(exceptionRows, schedule.activity.id) ?? "Kegiatan diliburkan.",
+    }));
+
+  const activeDutySchedules = effectiveDutySchedules.filter(
+    (schedule) => !isScheduleCancelled(exceptionRows, schedule.activity.id)
+  );
+
   // Absensi per (jadwal piket, anggota) untuk menentukan status tiap petugas.
   const attendanceByDutyMember = new Map<
     string,
@@ -203,7 +226,7 @@ export default async function DashboardPage() {
     }
   }
 
-  const dutyCards = effectiveDutySchedules.map((duty) => {
+  const dutyCards = activeDutySchedules.map((duty) => {
     const rows = duty.roster_members.map((entry) => ({
       member: entry.member,
       isSubstitution: false,
@@ -388,6 +411,23 @@ export default async function DashboardPage() {
             <p>Atur tanggal awal siklus sebelum perangkat menerima scan RFID.</p>
           </div>
           <Link href="/dashboard/settings/cycle">Atur siklus</Link>
+        </section>
+      )}
+
+      {cancelledToday.length > 0 && (
+        <section className="dh-notice" role="status">
+          <span className="dh-notice-mark" aria-hidden="true">i</span>
+          <div>
+            <strong>Piket diliburkan hari ini</strong>
+            <p>
+              {cancelledToday
+                .map((item) => `${item.activityName} — ${item.reason}`)
+                .join(" · ")}
+            </p>
+          </div>
+          {canManage && (
+            <Link href="/dashboard/settings/exceptions">Kelola libur</Link>
+          )}
         </section>
       )}
 

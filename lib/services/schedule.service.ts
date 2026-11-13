@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { assertScheduleNotCancelled } from "./schedule-exception.service";
 import { Prisma, ScheduleStatus } from "@prisma/client";
 import {
   CreateScheduleInput,
@@ -218,6 +219,9 @@ export async function createSchedule(input: CreateScheduleInput) {
 
   // 3. Konversi format waktu WIB ke UTC PostgreSQL DATE & TIMESTAMPTZ
   const dateUtc = parseDateOnlyToUtc(input.date);
+
+  // 3b. Tolak pembuatan sesi pada tanggal yang ditandai libur untuk kegiatan ini
+  await assertScheduleNotCancelled(dateUtc, activity.id, activity.name);
   const startTimeUtc = parseWibToUtc(input.start_time, input.date);
   const lateThresholdUtc = parseWibToUtc(input.late_threshold, input.date);
   const endTimeUtc = parseWibToUtc(input.end_time, input.date);

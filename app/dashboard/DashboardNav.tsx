@@ -25,6 +25,7 @@ const ITEMS: NavItem[] = [
   { href: "/dashboard/members", label: "Data anggota", icon: "M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2m6-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8m7-7h5m-2.5-2.5v5", adminOnly: true },
   { href: "/dashboard/duty/sapa-pagi", label: "Jadwal & roster", icon: "M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2m3 10h3m-3 4h7", adminOnly: true },
   { href: "/dashboard/settings/cycle", label: "Pengaturan siklus", icon: "M12 8v4l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z", adminOnly: true },
+  { href: "/dashboard/settings/exceptions", label: "Kalender libur", icon: "M8 3v3m8-3v3M4 8h16M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2m4 9 2 2 4-4", adminOnly: true },
   { href: "/dashboard/devices", label: "Perangkat IoT", icon: "M8 7h8v10H8zM10 3v4m4-4v4m-4 10v4m4-4v4M4 10h4m-4 4h4m8-4h4m-4 4h4", adminOnly: true },
 ];
 

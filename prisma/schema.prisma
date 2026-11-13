@@ -109,6 +109,7 @@ model User {
   audit_logs                 AuditLog[]
   violations_reported        Violation[]
   duty_substitutions_created DutySubstitution[]
+  schedule_exceptions_created ScheduleException[]
 
   @@index([role])
   @@index([is_active])
@@ -215,8 +216,9 @@ model Activity {
   created_at                     DateTime     @default(now())
   updated_at                     DateTime     @updatedAt
 
-  schedules      ActivitySchedule[]
-  duty_schedules DutySchedule[]
+  schedules           ActivitySchedule[]
+  duty_schedules      DutySchedule[]
+  schedule_exceptions ScheduleException[]
 
   @@index([is_active])
   @@index([type])
@@ -406,4 +408,22 @@ model DutySubstitution {
   @@index([original_member_id, duty_date])
   @@index([substitute_member_id, duty_date])
   @@map("duty_substitutions")
+}
+
+/// Pengecualian jadwal per tanggal: kegiatan diliburkan / ditiadakan.
+/// `activity_id` NULL berarti semua kegiatan pada tanggal tersebut.
+model ScheduleException {
+  id          String   @id @default(uuid())
+  date        DateTime @db.Date
+  activity_id String?
+  reason      String
+  created_by  String
+  created_at  DateTime @default(now())
+
+  activity Activity? @relation(fields: [activity_id], references: [id], onDelete: Cascade)
+  creator  User      @relation(fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@unique([date, activity_id])
+  @@index([date])
+  @@map("schedule_exceptions")
 }

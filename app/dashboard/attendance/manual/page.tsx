@@ -70,7 +70,7 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
   const dateUtc = parseDateOnlyToUtc(selectedDate);
   const { dayOfWeek } = getWibDateComponents(dateUtc);
 
-  const [sessions, activities, members, cycle] = await Promise.all([
+  const [sessions, activities, members, cycle, exceptions] = await Promise.all([
     prisma.activitySchedule.findMany({
       where: { date: dateUtc },
       orderBy: { start_time: "asc" },
@@ -105,10 +105,29 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
       },
     }),
     getCycleStatus(dateUtc).catch(() => null),
+    prisma.scheduleException.findMany({
+      where: { date: dateUtc },
+      select: { activity_id: true, reason: true },
+    }),
   ]);
 
   const cycleWeek =
     cycle && cycle.configured && "cycle_week" in cycle ? cycle.cycle_week : null;
+
+  // Kegiatan yang diliburkan pada tanggal ini tidak bisa dibuatkan sesi baru.
+  const allCancelled = exceptions.some((item) => item.activity_id === null);
+  const cancelledActivityIds = new Set(
+    exceptions
+      .map((item) => item.activity_id)
+      .filter((id): id is string => Boolean(id))
+  );
+  const cancellationReason = exceptions[0]?.reason ?? null;
+  const availableActivities = allCancelled
+    ? []
+    : activities.filter((activity) => !cancelledActivityIds.has(activity.id));
+  const cancelledActivityNames = activities
+    .filter((activity) => allCancelled || cancelledActivityIds.has(activity.id))
+    .map((activity) => activity.name);
 
   // Prefill jam sesi dari jadwal piket pada hari & minggu efektif kegiatan.
   const dutyDefaults: Record<string, { start: string; late: string; end: string }> = {};
@@ -203,12 +222,25 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
 
         <p className="manual-date-note">{dateFormatter.format(dateUtc)} · WIB</p>
 
-        {canCreateSession ? (
+        {cancelledActivityNames.length > 0 && (
+          <p className="manual-note" role="status">
+            <strong>Diliburkan:</strong> {cancelledActivityNames.join(", ")}
+            {cancellationReason ? ` — ${cancellationReason}` : ""}. Pembuatan sesi baru untuk
+            kegiatan tersebut ditolak pada tanggal ini.
+          </p>
+        )}
+
+        {canCreateSession && availableActivities.length > 0 ? (
           <CreateSessionForm
             date={selectedDate}
-            activities={activities}
+            activities={availableActivities}
             defaults={dutyDefaults}
           />
+        ) : canCreateSession ? (
+          <p className="manual-note">
+            Semua kegiatan pada tanggal ini diliburkan, sehingga tidak ada sesi baru yang bisa
+            dibuat.
+          </p>
         ) : (
           <p className="manual-note">
             Akun Anda tidak memiliki izin membuat sesi baru. Hubungi pengurus dengan akses

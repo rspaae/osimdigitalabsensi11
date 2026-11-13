@@ -28,6 +28,11 @@ import {
   applyCycleWeekOffset,
   getActivityWeekOffsets,
 } from "./activity-week.service";
+import { getScheduleExceptionsForDate } from "./schedule-exception.service";
+import {
+  getCancellationReason,
+  isScheduleCancelled,
+} from "@/lib/utils/schedule-exception";
 
 function addMinutesToTime(timeStr: string, minutesToAdd: number): string {
   const [h, m] = timeStr.split(":").map(Number);
@@ -112,7 +117,13 @@ export async function recordRfidAttendance(
 
   // 5. Cari jadwal piket hari ini untuk minggu efektif MASING-MASING kegiatan.
   // Kegiatan dengan offset 1 (mis. Danusan) memakai minggu kebalikan siklus global.
-  const weekOffsets = await getActivityWeekOffsets();
+  // Jadwal yang tanggalnya ditandai libur dikeluarkan dari pencocokan.
+  const todayUtcMidnight = parseDateOnlyToUtc(dateStr);
+  const [weekOffsets, exceptionRows] = await Promise.all([
+    getActivityWeekOffsets(),
+    getScheduleExceptionsForDate(todayUtcMidnight),
+  ]);
+
   const dayDutySchedules = await prisma.dutySchedule.findMany({
     where: {
       cycle_week: { in: [CycleWeek.WEEK_1, CycleWeek.WEEK_2] },
@@ -125,7 +136,7 @@ export async function recordRfidAttendance(
     },
   });
 
-  const todayDutySchedules = dayDutySchedules.filter(
+  const effectiveDutySchedules = dayDutySchedules.filter(
     (schedule) =>
       applyCycleWeekOffset(
         cycleWeek,
@@ -133,14 +144,31 @@ export async function recordRfidAttendance(
       ) === schedule.cycle_week
   );
 
+  const cancelledDutySchedules = effectiveDutySchedules.filter((schedule) =>
+    isScheduleCancelled(exceptionRows, schedule.activity.id)
+  );
+
+  const todayDutySchedules = effectiveDutySchedules.filter(
+    (schedule) => !isScheduleCancelled(exceptionRows, schedule.activity.id)
+  );
+
+  // Semua kegiatan hari ini libur → tolak scan dengan pesan yang jelas.
+  if (todayDutySchedules.length === 0 && cancelledDutySchedules.length > 0) {
+    const first = cancelledDutySchedules[0];
+    const reason =
+      getCancellationReason(exceptionRows, first.activity.id) ?? "Kegiatan diliburkan.";
+    throw new BusinessRuleError(
+      `Kegiatan ${first.activity.name} diliburkan: ${reason}`,
+      "ACTIVITY_CANCELLED"
+    );
+  }
+
   // Jendela sesi normal: start_time hingga grace period 30 menit setelah cutoff.
   // Jadwal di luar jendela ini tetap dapat menerima scan (dicatat sebagai DI_LUAR_JADWAL).
   const sessionWindowSchedules = todayDutySchedules.filter((schedule) => {
     const sessionEndWib = addMinutesToTime(schedule.cutoff_time_wib, 30);
     return timeStr >= schedule.start_time_wib && timeStr <= sessionEndWib;
   });
-
-  const todayUtcMidnight = parseDateOnlyToUtc(dateStr);
 
   // Ambil substitusi yang disetujui untuk member hari ini (berlaku sepanjang hari)
   const activeSubs = await prisma.dutySubstitution.findMany({
@@ -161,6 +189,23 @@ export async function recordRfidAttendance(
       s.roster_members.some((r) => r.member_id === member.id) ||
       activeSubScheduleIds.has(s.id)
   );
+
+  // Anggota hanya bertugas di kegiatan yang diliburkan hari ini → tolak scan
+  // (jangan dicatat sebagai DI_LUAR_JADWAL agar laporan tidak kotor).
+  if (rosteredToday.length === 0) {
+    const cancelledForMember = cancelledDutySchedules.find((schedule) =>
+      schedule.roster_members.some((r) => r.member_id === member.id)
+    );
+    if (cancelledForMember) {
+      const reason =
+        getCancellationReason(exceptionRows, cancelledForMember.activity.id) ??
+        "Kegiatan diliburkan.";
+      throw new BusinessRuleError(
+        `Kegiatan ${cancelledForMember.activity.name} diliburkan: ${reason}`,
+        "ACTIVITY_CANCELLED"
+      );
+    }
+  }
 
   // Target sesi yang akan menampung record absensi
   interface SessionTarget {

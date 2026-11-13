@@ -34,6 +34,7 @@ Cetak biru lengkap ada di [docs/architecture.md](docs/architecture.md).
 | Dashboard | Ringkasan anggota, cakupan UID, jadwal aktif, perangkat aktif, status kesiapan scan |
 | Rekap presensi | Tampilan presensi realtime per tanggal (WIB) |
 | Input manual | Membuat sesi kegiatan manual (jam terisi otomatis dari jadwal piket bila ada) lalu mencatat HADIR/TERLAMBAT/IZIN/SAKIT; ALPA tetap hanya lewat rekonsiliasi |
+| Kalender libur | Menandai tanggal/kegiatan yang ditiadakan; scan RFID ditolak dengan kode `ACTIVITY_CANCELLED` (LCD: “Kegiatan libur”), dashboard menampilkan pemberitahuan, dan sesi manual diblokir |
 | Laporan & ekspor | Rekap kehadiran per periode (nama, kelas, jabatan, status) siap cetak A4, unduh CSV, dan unduh `.xlsx`; filter rentang tanggal, kegiatan, organisasi, dan anggota nonaktif |
 | Pembaruan live | Ringkasan & rekap menyegarkan data otomatis tiap 5 detik (bisa dijeda), berhenti saat tab tidak aktif |
 
@@ -182,6 +183,7 @@ Panduan lengkap: [docs/iot-device-setup.md](docs/iot-device-setup.md).
 | [member-organization-api.md](docs/member-organization-api.md) | API anggota & organisasi |
 | [iot-device-setup.md](docs/iot-device-setup.md) | Provisioning perangkat |
 | [roster-import-guide.md](docs/roster-import-guide.md) | Import roster massal |
+| [schedule-exceptions.md](docs/schedule-exceptions.md) | Kalender libur & penolakan scan |
 | [vercel-deployment.md](docs/vercel-deployment.md) | Deploy web |
 | [vercel-railway-deployment.md](docs/vercel-railway-deployment.md) | Deploy web + database |
 
@@ -196,4 +198,5 @@ Panduan lengkap: [docs/iot-device-setup.md](docs/iot-device-setup.md).
 - Ekspor `.xlsx` dibuat langsung di server tanpa dependensi eksternal (`lib/utils/xlsx.ts`), berisi sheet `Kehadiran` (header beku + auto-filter) dan `Info` (parameter laporan).
 - Presensi manual memakai jam mulai sesi sebagai `scan_time` (bukan jam input) agar rekap per tanggal tetap konsisten saat data diisi untuk tanggal sebelumnya.
 - Kegiatan dapat memakai minggu siklus berbeda dari siklus global melalui `SystemSetting` `activity_week_offset:<KODE>` (`0` = ikut global, `1` = kebalikan). Saat ini `DANUSAN` diset `1` sehingga berjalan Minggu 2 ketika siklus global Minggu 1, sedangkan `SAPA_PAGI` tetap mengikuti global. Offset dipakai oleh scan RFID, dashboard, dan prefill input manual.
+- Libur piket disimpan di tabel `schedule_exceptions` per tanggal/kegiatan. Scan pada tanggal libur ditolak dengan kode `ACTIVITY_CANCELLED` (tanpa membuat record) dan pembuatan sesi manual diblokir. Detail: [docs/schedule-exceptions.md](docs/schedule-exceptions.md).
 - Test suite bersifat simulasi logika murni (tanpa DB), sehingga tidak menggantikan pengujian end-to-end terhadap service + database.

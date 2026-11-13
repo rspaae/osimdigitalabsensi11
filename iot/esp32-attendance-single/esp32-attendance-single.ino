@@ -361,6 +361,7 @@ void sendAttendanceScan(const String &rfidUid) {
     else if (codeStr == "SCHEDULE_NO_MATCH")    displayLcd("JADWAL TDK ADA",  "Cek Jam Piket");
     else if (codeStr == "SCHEDULE_AMBIGUOUS")   displayLcd("JADWAL BENTROK",   "Hubungi Admin");
     else if (codeStr == "CYCLE_NOT_CONFIGURED") displayLcd("SIKLUS TDK ADA",  "Set di Dashboard");
+    else if (codeStr == "ACTIVITY_CANCELLED")   displayLcd("KEGIATAN LIBUR",  "Tidak Ada Piket");
     else if (codeStr == "DEVICE_AUTH_FAILED" || httpCode == 401) displayLcd("DEVICE DITOLAK", "Auth Key Salah");
     else if (codeStr == "DEVICE_INACTIVE")      displayLcd("DEVICE NONAKTIF", "Hubungi Admin");
     else if (codeStr == "MEMBER_NOT_FOUND")     displayLcd("KARTU DITOLAK",   "Belum Terdaftar");

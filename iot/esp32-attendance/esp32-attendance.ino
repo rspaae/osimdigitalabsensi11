@@ -289,6 +289,8 @@ void sendAttendanceScan(const String &rfidUid) {
       displayLcd("JADWAL BENTROK", "Hubungi Admin");
     } else if (codeStr == "CYCLE_NOT_CONFIGURED") {
       displayLcd("SIKLUS TDK ADA", "Set di Dashboard");
+    } else if (codeStr == "ACTIVITY_CANCELLED") {
+      displayLcd("KEGIATAN LIBUR", "Tidak Ada Piket");
     } else if (codeStr == "DEVICE_AUTH_FAILED" || httpCode == 401) {
       displayLcd("DEVICE DITOLAK", "Auth Key Salah");
     } else if (codeStr == "DEVICE_INACTIVE") {

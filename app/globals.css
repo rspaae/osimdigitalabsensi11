@@ -5448,6 +5448,28 @@ body {
   }
 }
 
+/* ============================================================================
+   KALENDER LIBUR
+   ============================================================================ */
+.exception-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.exception-delete {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.exception-delete-error {
+  color: #b91c1c;
+  font-size: 10px;
+}
+
 /* ------------------------------------------------------------ PRINT (A4) -- */
 @media print {
   @page {
