@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { ZodError } from "zod";
 import { AuthenticationError } from "@/lib/auth/context";
 import { AuthorizationError } from "@/lib/auth/rbac";
@@ -13,8 +14,15 @@ import {
  * Tangani seluruh error API secara terpusat dengan status code HTTP yang sesuai,
  * sertakan kode error terstruktur (machine-readable) untuk firmware IoT & API client,
  * dan sembunyikan informasi sensitif / stack trace dari publik.
+ *
+ * PENTING: error kontrol internal Next.js (bail-out prerender saat `cookies()`
+ * dipakai di route dinamis, `redirect()`, `notFound()`) HARUS dilempar kembali.
+ * Bila ditelan di sini, Next.js mencoba merender statis lalu mencatatnya sebagai
+ * `API_SERVER_ERROR` dan mengembalikan 500 saat build.
  */
 export function handleApiError(error: unknown) {
+  unstable_rethrow(error);
+
   if (error instanceof AuthenticationError) {
     return NextResponse.json(
       { error: error.message, code: error.code || "UNAUTHORIZED" },
