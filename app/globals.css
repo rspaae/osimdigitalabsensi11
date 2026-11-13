@@ -5470,6 +5470,187 @@ body {
   font-size: 10px;
 }
 
+/* ============================================================================
+   REKAP HARIAN PER TANGGAL
+   ============================================================================ */
+.recap-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recap-days {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recap-day {
+  border: 1px solid var(--ui-line);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.recap-day-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.recap-day-summary::-webkit-details-marker {
+  display: none;
+}
+
+.recap-day-date {
+  color: var(--ui-ink);
+  font-size: 13px;
+  font-weight: 730;
+  text-transform: capitalize;
+}
+
+.recap-day-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recap-count {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.recap-count.is-ok {
+  background: var(--ui-mint);
+  color: #1f7a52;
+}
+
+.recap-count.is-warn {
+  background: var(--ui-cream);
+  color: #8a6318;
+}
+
+.recap-count.is-holiday {
+  background: var(--ui-lav);
+  color: #4a54a8;
+}
+
+.recap-day-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.recap-activity {
+  padding-top: 12px;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.recap-activity-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+
+.recap-activity-head h3 {
+  margin: 0;
+  color: var(--ui-ink);
+  font-size: 13.5px;
+  font-weight: 730;
+}
+
+.recap-activity-head p {
+  margin: 0;
+  color: var(--ui-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.recap-activity-count {
+  margin-left: auto;
+  color: var(--ui-muted);
+  font-size: 10px;
+}
+
+.recap-absent {
+  margin-top: 12px;
+}
+
+.recap-absent h4 {
+  margin: 0 0 6px;
+  color: var(--ui-faint);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recap-absent ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recap-absent li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  background: var(--ui-blue-softer);
+  color: var(--ui-ink-soft);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.recap-absent li span {
+  color: var(--ui-faint);
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.recap-empty,
+.recap-empty-small {
+  margin: 0;
+  color: var(--ui-faint);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.recap-empty-small {
+  font-size: 10px;
+}
+
+@media (max-width: 640px) {
+  .recap-day-summary {
+    padding: 12px 13px;
+  }
+
+  .recap-day-body {
+    padding: 0 13px 13px;
+  }
+
+  .recap-activity-count {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
 /* ------------------------------------------------------------ PRINT (A4) -- */
 @media print {
   @page {

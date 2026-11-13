@@ -32,6 +32,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     AppModule.REPORTS,
     PermissionAction.READ
   );
+  const canViewAttendance = canAccessModule(
+    user,
+    AppModule.ATTENDANCE,
+    PermissionAction.READ
+  );
 
   return (
     <div className="dashboard-shell">
@@ -62,7 +67,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         </Link>
 
         <div className="dashboard-sidebar-divider" />
-        <DashboardNav role={user.role} canViewReports={canViewReports} />
+        <DashboardNav
+          role={user.role}
+          canViewReports={canViewReports}
+          canViewAttendance={canViewAttendance}
+        />
 
         <div className="dashboard-sidebar-footer">
           <div className="dashboard-profile-avatar" aria-hidden="true">{initials}</div>

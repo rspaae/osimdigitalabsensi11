@@ -33,6 +33,7 @@ Cetak biru lengkap ada di [docs/architecture.md](docs/architecture.md).
 | Perangkat IoT | Registrasi device, rotasi API key (hash bcrypt, raw hanya tampil sekali), heartbeat `last_seen` |
 | Dashboard | Ringkasan anggota, cakupan UID, jadwal aktif, perangkat aktif, status kesiapan scan |
 | Rekap presensi | Tampilan presensi realtime per tanggal (WIB) |
+| Rekap harian | Per tanggal dan per kegiatan: daftar anggota yang sudah tercatat (status + jam) dan yang belum absen, termasuk penanda libur; rentang fleksibel maksimal 62 hari (default 7 hari terakhir) |
 | Input manual | Membuat sesi kegiatan manual (jam terisi otomatis dari jadwal piket bila ada) lalu mencatat HADIR/TERLAMBAT/IZIN/SAKIT; ALPA tetap hanya lewat rekonsiliasi |
 | Kalender libur | Menandai tanggal/kegiatan yang ditiadakan; scan RFID ditolak dengan kode `ACTIVITY_CANCELLED` (LCD: “Kegiatan libur”), dashboard menampilkan pemberitahuan, dan sesi manual diblokir |
 | Laporan & ekspor | Rekap kehadiran per periode (nama, kelas, jabatan, status) siap cetak A4, unduh CSV, dan unduh `.xlsx`; filter rentang tanggal, kegiatan, organisasi, dan anggota nonaktif |

@@ -110,6 +110,9 @@ export default async function AttendancePage({ searchParams }: PageProps) {
         <div className="settings-page-title-row">
           <h1 className="settings-page-title">Rekapitulasi Presensi Kehadiran</h1>
           <div className="rekap-head-actions">
+            <Link href="/dashboard/recap" className="overview-secondary-action">
+              Rekap harian
+            </Link>
             {canCreate && (
               <Link href="/dashboard/attendance/manual" className="overview-primary-action">
                 Input manual
