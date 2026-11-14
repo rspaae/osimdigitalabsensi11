@@ -282,7 +282,7 @@ export default function DutyRosterManager({
         <div>
           <h2 className="roster-automation-title">Sistem Absensi Piket Berjalan Otomatis</h2>
           <p className="roster-automation-desc">
-            Sistem absensi berulang secara otomatis setiap hari <strong>Senin s/d Jumat (05:30 – 06:00 WIB)</strong> mengikuti siklus 14 hari.
+            Sistem absensi berulang secara otomatis setiap hari <strong>Senin s/d Jumat</strong> mengikuti siklus 14 hari dan jam jadwal masing-masing kegiatan (Sapa Pagi <strong>04:30 – 05:50 WIB</strong>, Danusan <strong>05:00 – 06:10 WIB</strong>).
             <strong> Tidak perlu membuka/menutup sesi absensi manual.</strong> Siswa yang bertugas piket hari ini akan otomatis tercatat sebagai <strong>HADIR</strong> saat tap kartu RFID, sedangkan siswa lain yang hadir tetap tercatat sebagai <strong>DI_LUAR_JADWAL</strong>.
           </p>
         </div>
@@ -294,8 +294,8 @@ export default function DutyRosterManager({
         </div>
       )}
 
-      {/* Navigasi Pilihan Minggu (Week 1 / Week 2) */}
-      <div className="roster-tab-group" role="tablist" aria-label="Pilihan Siklus Minggu">
+      {/* Navigasi Pilihan Minggu (Week 1 / Week 2) & Tukar Piket */}
+      <div className="roster-tab-group" role="tablist" aria-label="Pilihan Siklus Minggu" style={{ alignItems: "center" }}>
         <button
           type="button"
           role="tab"
@@ -314,6 +314,13 @@ export default function DutyRosterManager({
         >
           📅 MINGGU 2 (WEEK 2)
         </button>
+        <Link
+          href="/dashboard/duty/substitutions"
+          className="roster-tab-btn"
+          style={{ marginLeft: "auto", textDecoration: "none", background: "#f0f9ff", color: "#0369a1", borderColor: "#bae6fd" }}
+        >
+          🔄 Kelola Tukar Piket →
+        </Link>
       </div>
 
       {/* Tampilan Kartu Jadwal Per Hari */}
@@ -330,7 +337,7 @@ export default function DutyRosterManager({
                 <div className="duty-day-title-wrap">
                   <h3 className="duty-day-name">{DAY_LABELS[day]}</h3>
                   <span className="duty-day-time-badge">
-                    ⏰ {schedule?.start_time_wib ?? "05:30"} – {schedule?.cutoff_time_wib ?? "06:00"} WIB
+                    ⏰ {schedule ? `${schedule.start_time_wib} – ${schedule.cutoff_time_wib} WIB` : "Jadwal belum diatur"}
                   </span>
                   {isTodaySchedule && (
                     <span className="duty-today-indicator">● HARI INI</span>

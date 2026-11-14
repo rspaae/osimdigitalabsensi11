@@ -8,7 +8,7 @@ Roster resmi Sapa Pagi tersimpan di `scripts/roster-sapa-pagi.json` dan berisi 7
 
 1. Daftarkan anggota dari **Dashboard → Data Anggota** dengan nama dan organisasi (OSIS/MPK). NIS, NISN, dan kelas opsional; UID RFID boleh ditambahkan kemudian.
 2. Buka **Dashboard → Jadwal & Roster**.
-3. Atur jam mulai (default `05:30` WIB sesuai contoh jadwal) lalu pilih **Siapkan Kegiatan & Jadwal yang Belum Ada**. Halaman membuat kegiatan `SAPA_PAGI` jika belum tersedia dan jadwal Week 1/Week 2 untuk Senin–Jumat yang belum ada. Cutoff Sapa Pagi adalah `06:00` WIB.
+3. Atur jam mulai (default `04:30` WIB) lalu pilih **Siapkan Kegiatan & Jadwal yang Belum Ada**. Halaman membuat kegiatan `SAPA_PAGI` jika belum tersedia dan jadwal Week 1/Week 2 untuk Senin–Jumat yang belum ada. Cutoff Sapa Pagi adalah `05:50` WIB. Untuk Danusan jamnya `05:00`–`06:10` WIB.
 4. Periksa jumlah nama yang cocok. Halaman hanya mencocokkan nama lengkap secara persis (tanpa fuzzy matching) dan memeriksa OSIS/MPK. Nama ganda, organisasi berbeda, dan anggota nonaktif tidak otomatis dipilih.
 5. Pilih **Hubungkan semua nama yang cocok**. Proses ini menambahkan penugasan yang belum ada dan aman diulang; roster lama tidak dihapus.
 6. Setelah UID kartu tersedia, isi dan simpan di kolom RFID pada **Dashboard → Data Anggota**.
@@ -45,8 +45,8 @@ POST /api/v1/duty/schedules
   "activity_id": "<id_sapa_pagi>",
   "cycle_week": "WEEK_1",
   "day_of_week": "MONDAY",
-  "start_time_wib": "05:30",
-  "cutoff_time_wib": "06:00",
+  "start_time_wib": "04:30",
+  "cutoff_time_wib": "05:50",
   "title": "Sapa Pagi Minggu 1 - Senin"
 }
 ```
@@ -122,8 +122,8 @@ npx tsx scripts/import-roster.ts --input scripts/roster-danusan.json --activity 
 | `--activity <code>` | `SAPA_PAGI` | Kode aktivitas di database |
 | `--dry-run` | (tidak aktif) | Simulasi tanpa menyimpan ke database |
 | `--create-schedules` | (tidak aktif) | Membuat `DutySchedule` yang belum ada untuk kombinasi minggu/hari pada file |
-| `--start <HH:MM>` | `05:30` | Jam mulai untuk jadwal yang baru dibuat |
-| `--cutoff <HH:MM>` | `06:00` | Cutoff untuk jadwal yang baru dibuat |
+| `--start <HH:MM>` | `04:30` (Sapa Pagi) / `05:00` (Danusan) | Jam mulai untuk jadwal yang baru dibuat |
+| `--cutoff <HH:MM>` | `05:50` (Sapa Pagi) / `06:10` (Danusan) | Cutoff untuk jadwal yang baru dibuat |
 | `--replace` | (tidak aktif) | Menghapus roster lama **hanya pada jadwal yang dipakai file**, lalu mengisi ulang. Dibatalkan otomatis bila masih ada entri yang tidak cocok. |
 
 ### Roster Danusan 2026
@@ -151,7 +151,7 @@ npm run import:danusan
 npm run import:danusan -- --replace
 ```
 
-10 jadwal `DutySchedule` Danusan (Minggu 1/2 × Senin–Jumat) sudah ada di database dengan jam `05:30–06:00` WIB. Script **tidak mengubah jam** jadwal yang sudah ada; gunakan `--create-schedules --start … --cutoff …` hanya bila ada jadwal yang benar-benar belum dibuat.
+10 jadwal `DutySchedule` Danusan (Minggu 1/2 × Senin–Jumat) sudah ada di database dengan jam `05:00–06:10` WIB. Script **tidak mengubah jam** jadwal yang sudah ada; gunakan `--create-schedules --start … --cutoff …` hanya bila ada jadwal yang benar-benar belum dibuat.
 
 ---
 

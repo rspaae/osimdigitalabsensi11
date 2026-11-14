@@ -13,8 +13,8 @@
  *   --dry-run             Simulasi; tidak menulis apa pun ke database
  *   --create-schedules    Buat DutySchedule yang belum ada untuk kombinasi
  *                         minggu/hari yang dipakai file (butuh --start/--cutoff)
- *   --start <HH:MM>       Jam mulai untuk jadwal baru (default 05:30)
- *   --cutoff <HH:MM>      Cutoff untuk jadwal baru (default 06:00)
+ *   --start <HH:MM>       Jam mulai untuk jadwal baru (default: 04:30 Sapa Pagi / 05:00 Danusan)
+ *   --cutoff <HH:MM>      Cutoff untuk jadwal baru (default: 05:50 Sapa Pagi / 06:10 Danusan)
  *   --replace             Hapus roster lama HANYA pada jadwal yang dipakai file,
  *                         lalu isi ulang. Dibatalkan bila ada entri tidak cocok.
  *
@@ -54,8 +54,14 @@ const activityCode = getArg("--activity", "SAPA_PAGI")!;
 const isDryRun = hasFlag("--dry-run");
 const createSchedules = hasFlag("--create-schedules");
 const replaceRoster = hasFlag("--replace");
-const startTime = getArg("--start", "05:30")!;
-const cutoffTime = getArg("--cutoff", "06:00")!;
+
+// Jam bawaan mengikuti kegiatan: Sapa Pagi 04:30–05:50, Danusan 05:00–06:10 WIB.
+const defaultTimes =
+  activityCode === "DANUSAN"
+    ? { start: "05:00", cutoff: "06:10" }
+    : { start: "04:30", cutoff: "05:50" };
+const startTime = getArg("--start", defaultTimes.start)!;
+const cutoffTime = getArg("--cutoff", defaultTimes.cutoff)!;
 
 // ─── Tipe Data Input ─────────────────────────────────────────────────────────
 

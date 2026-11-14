@@ -161,7 +161,7 @@ export default function AttendanceViewer({ initialRecords, selectedDate, canCorr
               Belum ada data presensi pada tanggal {filterDate}.
             </p>
             <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
-              Data presensi akan otomatis muncul saat siswa menempelkan kartu RFID ke scanner ESP32 pada jam piket (05:30 – 06:00 WIB).
+              Data presensi akan otomatis muncul saat siswa menempelkan kartu RFID ke scanner ESP32 pada jam piket yang berlaku.
             </p>
           </div>
         ) : (
