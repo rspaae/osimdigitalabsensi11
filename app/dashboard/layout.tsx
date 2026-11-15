@@ -6,6 +6,7 @@ import { canAccessModule } from "@/lib/auth/rbac";
 import { logoutAction } from "@/app/actions/auth.actions";
 import { AppModule, PermissionAction, type Role } from "@/types/auth";
 import DashboardNav from "./DashboardNav";
+import MobileBottomNav from "./MobileBottomNav";
 
 export const instant = false;
 
@@ -106,6 +107,14 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         </header>
         <div className="dashboard-main-content">{children}</div>
       </div>
+
+      {/* Dynamic Bottom Navigation Bar for Mobile */}
+      <MobileBottomNav
+        role={user.role}
+        canViewReports={canViewReports}
+        canViewAttendance={canViewAttendance}
+        username={user.username}
+      />
     </div>
   );
 }
