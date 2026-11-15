@@ -276,8 +276,8 @@ export default function DutyRosterManager({
 
   return (
     <div className="duty-roster-container">
-      {/* Banner Penjelasan Otomatisasi */}
-      <div className="roster-automation-banner">
+      {/* Banner Penjelasan Otomatisasi Polished */}
+      <div className="roster-automation-banner" style={{ borderLeft: "4px solid #10b981" }}>
         <span className="roster-automation-icon" aria-hidden="true">✓</span>
         <div>
           <h2 className="roster-automation-title">Sistem Absensi Piket Berjalan Otomatis</h2>
@@ -294,36 +294,42 @@ export default function DutyRosterManager({
         </div>
       )}
 
-      {/* Navigasi Pilihan Minggu (Week 1 / Week 2) & Tukar Piket */}
-      <div className="roster-tab-group" role="tablist" aria-label="Pilihan Siklus Minggu" style={{ alignItems: "center" }}>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={selectedWeek === "WEEK_1"}
-          className={`roster-tab-btn ${selectedWeek === "WEEK_1" ? "is-active" : ""}`}
-          onClick={() => setSelectedWeek("WEEK_1")}
-        >
-          📅 MINGGU 1 (WEEK 1)
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={selectedWeek === "WEEK_2"}
-          className={`roster-tab-btn ${selectedWeek === "WEEK_2" ? "is-active" : ""}`}
-          onClick={() => setSelectedWeek("WEEK_2")}
-        >
-          📅 MINGGU 2 (WEEK 2)
-        </button>
+      {/* Navigasi Pilihan Minggu Segmen Modern (Week 1 / Week 2) & Tukar Piket */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, flexWrap: "wrap", gap: 12 }}>
+        <div className="ui-segmented-tabs" role="tablist" aria-label="Pilihan Siklus Minggu">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedWeek === "WEEK_1"}
+            className={`ui-segmented-btn ${selectedWeek === "WEEK_1" ? "is-active" : ""}`}
+            onClick={() => setSelectedWeek("WEEK_1")}
+          >
+            <span>📅</span>
+            <span>Minggu 1 (Week 1)</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedWeek === "WEEK_2"}
+            className={`ui-segmented-btn ${selectedWeek === "WEEK_2" ? "is-active" : ""}`}
+            onClick={() => setSelectedWeek("WEEK_2")}
+          >
+            <span>📅</span>
+            <span>Minggu 2 (Week 2)</span>
+          </button>
+        </div>
+
         <Link
           href="/dashboard/duty/substitutions"
-          className="roster-tab-btn"
-          style={{ marginLeft: "auto", textDecoration: "none", background: "#f0f9ff", color: "#0369a1", borderColor: "#bae6fd" }}
+          className="ui-pill-btn"
+          style={{ background: "#f0f9ff", color: "#0369a1", borderColor: "#bae6fd", fontWeight: 650, padding: "8px 16px" }}
         >
-          🔄 Kelola Tukar Piket →
+          <span>🔄</span>
+          <span>Kelola Tukar Piket &rarr;</span>
         </Link>
       </div>
 
-      {/* Tampilan Kartu Jadwal Per Hari */}
+      {/* Tampilan Kartu Jadwal Per Hari Polished */}
       <div className="duty-days-grid">
         {DAYS.map((day) => {
           const schedule = schedulesByKey.get(keyOf(selectedWeek, day));
@@ -331,100 +337,150 @@ export default function DutyRosterManager({
           const isTodaySchedule = todayDayOfWeek === day;
 
           return (
-            <div key={keyOf(selectedWeek, day)} className={`duty-day-card ${isTodaySchedule ? "is-today" : ""}`}>
+            <div key={keyOf(selectedWeek, day)} className={`ui-duty-day-card ${isTodaySchedule ? "is-today" : ""}`}>
               {/* Header Kartu Hari */}
-              <div className="duty-day-header">
-                <div className="duty-day-title-wrap">
-                  <h3 className="duty-day-name">{DAY_LABELS[day]}</h3>
-                  <span className="duty-day-time-badge">
+              <div className="ui-duty-day-header">
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div className="ui-duty-day-title">
+                    <span>{DAY_LABELS[day]}</span>
+                  </div>
+                  <span className="ui-duty-day-time">
                     ⏰ {schedule ? `${schedule.start_time_wib} – ${schedule.cutoff_time_wib} WIB` : "Jadwal belum diatur"}
                   </span>
                   {isTodaySchedule && (
-                    <span className="duty-today-indicator">● HARI INI</span>
+                    <span className="ui-duty-day-badge-today">
+                      ● HARI INI
+                    </span>
                   )}
                 </div>
                 <div>
-                  <span className="badge-status badge-hadir">
-                    {rosterList.length} Siswa Bertugas
+                  <span className="ui-pill-btn" style={{ background: "#f8fafc", borderColor: "#e2e8f0", fontSize: 11 }}>
+                    <strong>{rosterList.length}</strong> Siswa Petugas
                   </span>
                 </div>
               </div>
 
-              {/* Tabel Daftar Siswa Piket */}
+              {/* Tabel Daftar Siswa Piket Polished */}
               {rosterList.length === 0 ? (
-                <p className="member-empty-state" style={{ padding: "16px", margin: "12px 0" }}>
-                  Belum ada siswa yang ditugaskan untuk hari {DAY_LABELS[day]}.
-                </p>
+                <div className="ui-empty-card" style={{ padding: "28px 16px", margin: 16 }}>
+                  <div className="ui-empty-icon" style={{ width: 38, height: 38, fontSize: 18, marginBottom: 8 }} aria-hidden="true">
+                    👥
+                  </div>
+                  <h4 className="ui-empty-title" style={{ fontSize: 14 }}>Belum ada petugas terjadwal</h4>
+                  <p className="ui-empty-desc" style={{ fontSize: 12 }}>
+                    Pilih nama siswa di bawah untuk menambahkan ke daftar piket hari {DAY_LABELS[day]}.
+                  </p>
+                </div>
               ) : (
-                <div className="member-table-wrap" style={{ margin: "12px 0" }}>
+                <div className="member-table-wrap" style={{ margin: 0 }}>
                   <table className="duty-student-list">
                     <thead>
                       <tr>
-                        <th style={{ width: 40 }}>No</th>
-                        <th>Nama Siswa Petugas</th>
+                        <th style={{ width: 36, textAlign: "center" }}>No</th>
+                        <th>Petugas Piket</th>
                         <th>Organisasi</th>
                         <th>Kelas / NIS</th>
                         <th>Kartu RFID</th>
-                        <th>Kehadiran Hari Ini</th>
-                        <th style={{ width: 60, textAlign: "center" }}>Aksi</th>
+                        <th>Status Hari Ini</th>
+                        <th style={{ width: 50, textAlign: "center" }}>Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rosterList.map((petugas, index) => {
                         const att = todayAttendanceMap.get(petugas.member_id);
                         const initial = petugas.full_name.charAt(0).toUpperCase();
+                        const isMpk = petugas.organization_type === "MPK";
 
-                        let todayStatusBadge = <span className="badge-status badge-belum">Belum Tap</span>;
+                        let todayStatusBadge = (
+                          <span className="ui-status-badge belum">
+                            <span className="ui-status-dot" aria-hidden="true" />
+                            Belum Tap
+                          </span>
+                        );
                         if (att) {
                           if (att.status === "HADIR") {
-                            todayStatusBadge = <span className="badge-status badge-hadir">✓ HADIR</span>;
+                            todayStatusBadge = (
+                              <span className="ui-status-badge hadir">
+                                <span className="ui-status-dot" aria-hidden="true" />
+                                ✓ HADIR
+                              </span>
+                            );
                           } else if (att.status === "DI_LUAR_JADWAL") {
-                            todayStatusBadge = <span className="badge-status badge-diluarjadwal">DI LUAR JADWAL</span>;
+                            todayStatusBadge = (
+                              <span className="ui-status-badge diluarjadwal">
+                                <span className="ui-status-dot" aria-hidden="true" />
+                                DI LUAR JADWAL
+                              </span>
+                            );
                           } else if (att.status === "TERLAMBAT") {
-                            todayStatusBadge = <span className="badge-status badge-terlambat">TERLAMBAT</span>;
+                            todayStatusBadge = (
+                              <span className="ui-status-badge terlambat">
+                                <span className="ui-status-dot" aria-hidden="true" />
+                                TERLAMBAT
+                              </span>
+                            );
                           }
                         }
 
                         return (
                           <tr key={petugas.member_id}>
-                            <td style={{ color: "var(--text-muted)" }}>{index + 1}</td>
+                            <td style={{ color: "#94a3b8", textAlign: "center", fontSize: 12 }}>
+                              {index + 1}
+                            </td>
                             <td>
-                              <div style={{ display: "flex", alignItems: "center" }}>
-                                <span className="duty-student-avatar">{initial}</span>
-                                <strong>{petugas.full_name}</strong>
+                              <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                                <span className={`ui-avatar ${isMpk ? "mpk" : ""}`} aria-hidden="true">
+                                  {initial}
+                                </span>
+                                <strong style={{ color: "#0f172a", fontSize: 13 }}>
+                                  {petugas.full_name}
+                                </strong>
                               </div>
                             </td>
                             <td>
-                              <span className={petugas.organization_type === "MPK" ? "badge-org-mpk" : "badge-org-osis"}>
+                              <span className={isMpk ? "badge-org-mpk" : "badge-org-osis"}>
                                 {petugas.organization_type}
                               </span>
                             </td>
                             <td>
-                              {petugas.class_grade ?? "—"}
-                              {petugas.nis && <small style={{ display: "block", color: "var(--text-muted)" }}>NIS: {petugas.nis}</small>}
+                              <span style={{ fontWeight: 550, color: "#334155" }}>
+                                {petugas.class_grade ?? "—"}
+                              </span>
+                              {petugas.nis && (
+                                <small style={{ display: "block", color: "#64748b", fontSize: 10.5 }}>
+                                  NIS: {petugas.nis}
+                                </small>
+                              )}
                             </td>
                             <td>
                               {petugas.rfid_uid ? (
-                                <span style={{ color: "#059669", fontSize: 12, fontWeight: 600 }}>
-                                  ✓ UID: {petugas.rfid_uid}
+                                <span className="ui-rfid-chip" style={{ color: "#059669" }}>
+                                  ✓ {petugas.rfid_uid}
                                 </span>
                               ) : (
-                                <span style={{ color: "#d97706", fontSize: 12 }}>
-                                  ⚠️ Belum Ada Kartu
+                                <span className="ui-rfid-chip" style={{ color: "#d97706", background: "#fffbeb" }}>
+                                  ⚠️ Belum Ada
                                 </span>
                               )}
                             </td>
                             <td>
-                              {isTodaySchedule ? todayStatusBadge : <span style={{ color: "var(--text-muted)", fontSize: 12 }}>Terjadwal</span>}
+                              {isTodaySchedule ? (
+                                todayStatusBadge
+                              ) : (
+                                <span style={{ color: "#94a3b8", fontSize: 11.5 }}>
+                                  Terjadwal
+                                </span>
+                              )}
                             </td>
                             <td style={{ textAlign: "center" }}>
                               {schedule && (
                                 <button
                                   type="button"
                                   className="duty-btn-remove"
-                                  title="Hapus dari jadwal ini"
+                                  title={`Hapus ${petugas.full_name} dari jadwal`}
                                   onClick={() => handleRemoveMember(schedule.id, petugas.member_id, petugas.full_name)}
                                   disabled={busy}
+                                  aria-label={`Hapus ${petugas.full_name}`}
                                 >
                                   ✕
                                 </button>
@@ -440,39 +496,43 @@ export default function DutyRosterManager({
 
               {/* Formulir Cepat: Tambah Siswa ke Jadwal Hari Ini */}
               {schedule && (
-                <div className="duty-add-member-form">
-                  <select
-                    className="duty-select-input"
-                    value={selectedMemberToAdd[schedule.id] ?? ""}
-                    onChange={(e) =>
-                      setSelectedMemberToAdd((prev) => ({
-                        ...prev,
-                        [schedule.id]: e.target.value,
-                      }))
-                    }
-                    disabled={busy}
-                  >
-                    <option value="">-- Pilih Siswa untuk Ditambahkan ke Roster --</option>
-                    {members
-                      .filter(
-                        (m) =>
-                          m.status === "ACTIVE" &&
-                          !rosterList.some((r) => r.member_id === m.id)
-                      )
-                      .map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.full_name} ({m.organization_type} {m.class_grade ? `— ${m.class_grade}` : ""})
-                        </option>
-                      ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="duty-btn-add"
-                    onClick={() => handleAddMember(schedule.id)}
-                    disabled={busy || !selectedMemberToAdd[schedule.id]}
-                  >
-                    + Tambah Petugas
-                  </button>
+                <div style={{ padding: "14px 18px", borderTop: "1px solid #f1f5f9", background: "#fcfdfc" }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <select
+                      className="duty-select-input"
+                      style={{ fontSize: 13, borderColor: "#cbd5e1", borderRadius: 8 }}
+                      value={selectedMemberToAdd[schedule.id] ?? ""}
+                      onChange={(e) =>
+                        setSelectedMemberToAdd((prev) => ({
+                          ...prev,
+                          [schedule.id]: e.target.value,
+                        }))
+                      }
+                      disabled={busy}
+                    >
+                      <option value="">-- Pilih Siswa untuk Ditambahkan ke Roster --</option>
+                      {members
+                        .filter(
+                          (m) =>
+                            m.status === "ACTIVE" &&
+                            !rosterList.some((r) => r.member_id === m.id)
+                        )
+                        .map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.full_name} ({m.organization_type} {m.class_grade ? `— ${m.class_grade}` : ""})
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="duty-btn-add"
+                      style={{ borderRadius: 8 }}
+                      onClick={() => handleAddMember(schedule.id)}
+                      disabled={busy || !selectedMemberToAdd[schedule.id]}
+                    >
+                      + Tambah Petugas
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -481,18 +541,18 @@ export default function DutyRosterManager({
       </div>
 
       {/* Accordion Pengaturan Teknis & Sinkronisasi */}
-      <details className="member-issue-details" style={{ maxWidth: "100%", marginTop: 32, background: "white", padding: 16, border: "1px solid var(--border-default)", borderRadius: 10 }}>
-        <summary style={{ fontSize: 13, color: "var(--text-secondary)", cursor: "pointer" }}>
-          ⚙️ Pengaturan Teknis &amp; Alat Sinkronisasi Massal (Klik untuk Membuka)
+      <details className="member-issue-details" style={{ maxWidth: "100%", marginTop: 32, background: "white", padding: 18, border: "1px solid var(--border-default)", borderRadius: 12 }}>
+        <summary style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", cursor: "pointer" }}>
+          ⚙️ Pengaturan Teknis &amp; Alat Sinkronisasi Massal
         </summary>
         <div style={{ marginTop: 14 }}>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px" }}>
-            Fitur di bawah ini hanya digunakan bila kamu ingin melakukan sinkronisasi ulang seluruh daftar nama dari file master JSON ke jadwal.
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px", lineHeight: 1.5 }}>
+            Fitur sinkronisasi digunakan apabila ingin menautkan ulang otomatis daftar nama dari template data ke database.
           </p>
           <button
             type="button"
             className="cycle-submit-btn"
-            style={{ width: "auto" }}
+            style={{ width: "auto", padding: "8px 18px", fontSize: 13 }}
             onClick={handleBulkApplyRoster}
             disabled={busy}
           >

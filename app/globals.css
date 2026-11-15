@@ -102,7 +102,34 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  background-color: var(--bg-page);
+  background: linear-gradient(145deg, #f0fdf4 0%, #faf9f0 50%, #f0fdf4 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle background decoration */
+.login-page::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  right: -120px;
+  width: 440px;
+  height: 440px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.login-page::after {
+  content: "";
+  position: absolute;
+  bottom: -80px;
+  left: -80px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(22, 163, 74, 0.06) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .login-container {
@@ -111,6 +138,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ---- Header / Identity ---- */
@@ -155,14 +184,16 @@ body {
 
 /* ---- Login Card ---- */
 .login-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(16, 185, 129, 0.15);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card-md);
+  box-shadow: 0 4px 24px -4px rgba(24, 115, 90, 0.10), 0 1px 3px rgba(0,0,0,0.06);
   padding: 32px;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .card-heading {
@@ -300,26 +331,35 @@ form[aria-label="Formulir Login"] {
 /* Submit button */
 .submit-button {
   width: 100%;
-  height: 44px;
+  height: 46px;
   padding: 0 20px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 650;
   font-family: inherit;
   color: var(--color-white);
-  background-color: var(--accent-primary);
+  background: linear-gradient(135deg, #18735a 0%, #15803d 100%);
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color var(--transition-fast), opacity var(--transition-fast);
+  transition: all 180ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(24, 115, 90, 0.25);
+  letter-spacing: 0.01em;
 }
 
 .submit-button:hover:not(:disabled) {
-  background-color: var(--accent-hover);
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  box-shadow: 0 4px 12px rgba(24, 115, 90, 0.35);
+  transform: translateY(-1px);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(24, 115, 90, 0.2);
 }
 
 .submit-button:disabled {
@@ -5775,3 +5815,538 @@ body {
     text-decoration: none;
   }
 }
+
+/* ============================================================================
+   UI/UX PRO MAX — POLISHED INTERACTIVE DESIGN SYSTEM
+   Enhanced components, micro-interactions, responsive tables & badges
+   ============================================================================ */
+
+/* Pulsing live badge for real-time scanner & status */
+.ui-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.ui-pulse-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.ui-pulse-dot::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: #10b981;
+  opacity: 0.4;
+  animation: ui-beacon-pulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ui-beacon-pulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(0.9); opacity: 0; }
+}
+
+/* Elevated Metric Stat Cards */
+.ui-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.ui-stat-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e5e9e6;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  overflow: hidden;
+}
+
+.ui-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.07);
+  border-color: #cbd5e1;
+}
+
+.ui-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ui-card-accent, #18735a);
+}
+
+.ui-stat-card.accent-mint::before { background: #10b981; }
+.ui-stat-card.accent-sky::before { background: #0284c7; }
+.ui-stat-card.accent-amber::before { background: #f59e0b; }
+.ui-stat-card.accent-indigo::before { background: #6366f1; }
+.ui-stat-card.accent-rose::before { background: #f43f5e; }
+
+.ui-stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ui-stat-label {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ui-stat-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.ui-stat-card.accent-mint .ui-stat-icon-wrap { background: #ecfdf5; color: #059669; }
+.ui-stat-card.accent-sky .ui-stat-icon-wrap { background: #f0f9ff; color: #0284c7; }
+.ui-stat-card.accent-amber .ui-stat-icon-wrap { background: #fffbeb; color: #d97706; }
+.ui-stat-card.accent-indigo .ui-stat-icon-wrap { background: #eef2ff; color: #4f46e5; }
+.ui-stat-card.accent-rose .ui-stat-icon-wrap { background: #fff1f2; color: #e11d48; }
+
+.ui-stat-value {
+  font-size: 28px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+}
+
+.ui-stat-desc {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* Quick Filter Pills */
+.ui-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ui-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.ui-pill-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.ui-pill-btn.is-active {
+  background: #18735a;
+  border-color: #18735a;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(24, 115, 90, 0.25);
+}
+
+.ui-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.ui-pill-btn.is-active .ui-pill-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Clean Search Bar & Inputs */
+.ui-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.ui-search-icon {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+  color: #94a3b8;
+}
+
+.ui-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  border-radius: 9px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.ui-search-input:focus {
+  border-color: #18735a;
+  box-shadow: 0 0 0 3px rgba(24, 115, 90, 0.14);
+}
+
+.ui-search-clear {
+  position: absolute;
+  right: 10px;
+  background: #e2e8f0;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: #475569;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* Segmented Cycle Tabs for Duty Roster */
+.ui-segmented-tabs {
+  display: inline-flex;
+  padding: 4px;
+  background: #eef2ef;
+  border-radius: 12px;
+  gap: 4px;
+  border: 1px solid #e1e7e3;
+}
+
+.ui-segmented-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 650;
+  border: none;
+  background: transparent;
+  color: #55655d;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.ui-segmented-btn:hover {
+  color: #172521;
+}
+
+.ui-segmented-btn.is-active {
+  background: #ffffff;
+  color: #18735a;
+  font-weight: 750;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Duty Day Cards */
+.ui-duty-day-card {
+  background: #ffffff;
+  border: 1px solid #e5e9e6;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.ui-duty-day-card.is-today {
+  border-color: #10b981;
+  box-shadow: 0 0 0 1.5px #10b981, 0 4px 12px rgba(16, 185, 129, 0.08);
+}
+
+.ui-duty-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #fafbfa;
+  border-bottom: 1px solid #e5e9e6;
+  flex-wrap: wrap;
+}
+
+.ui-duty-day-card.is-today .ui-duty-day-header {
+  background: #f0fdf4;
+  border-bottom-color: #bbf7d0;
+}
+
+.ui-duty-day-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ui-duty-day-badge-today {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ui-duty-day-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 550;
+}
+
+/* RFID UID Tag */
+.ui-rfid-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+/* User avatar pill */
+.ui-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 750;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.ui-avatar.mpk {
+  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+  color: #9d174d;
+}
+
+/* Refined status badges */
+.ui-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.ui-status-badge.hadir {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.ui-status-badge.diluarjadwal {
+  background: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.ui-status-badge.terlambat {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.ui-status-badge.alpa {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.ui-status-badge.belum {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.ui-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Empty State Card */
+.ui-empty-card {
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: #fafbfa;
+  border: 1.5px dashed #cbd5e1;
+  margin: 12px 0;
+}
+
+.ui-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  background: #eef2ef;
+  color: #18735a;
+  margin-bottom: 12px;
+}
+
+.ui-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px;
+}
+
+.ui-empty-desc {
+  font-size: 13px;
+  color: #64748b;
+  max-width: 440px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Daily Recap Day Accordion */
+.ui-recap-day {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 140ms ease;
+}
+
+.ui-recap-day[open] {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.ui-recap-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+  background: #ffffff;
+  transition: background-color 140ms ease;
+  flex-wrap: wrap;
+}
+
+.ui-recap-summary:hover {
+  background: #f8fafc;
+}
+
+.ui-recap-day-date {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-recap-progress-bar {
+  width: 90px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.ui-recap-progress-fill {
+  height: 100%;
+  background: #10b981;
+  border-radius: 9999px;
+}
+
+@media (max-width: 640px) {
+  .ui-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .ui-stat-card {
+    padding: 12px 14px;
+  }
+  .ui-stat-value {
+    font-size: 22px;
+  }
+}
+
