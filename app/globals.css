@@ -6506,3 +6506,281 @@ body {
     display: none !important;
   }
 }
+
+
+/* =========================================================
+   UI SKELETON & HOVER ANIMATION SYSTEM (UI/UX PRO MAX)
+   ========================================================= */
+
+/* Shimmer Keyframes */
+@keyframes ui-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Skeleton Base */
+.ui-skeleton {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 0%,
+    #e2e8f0 35%,
+    #f8fafc 50%,
+    #e2e8f0 65%,
+    #f1f5f9 100%
+  );
+  background-size: 200% 100%;
+  animation: ui-shimmer 1.6s ease-in-out infinite;
+  border-radius: 6px;
+  display: block;
+}
+
+.ui-skeleton-text {
+  height: 14px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.ui-skeleton-text.is-short {
+  width: 45%;
+}
+
+.ui-skeleton-text.is-medium {
+  width: 70%;
+}
+
+.ui-skeleton-title {
+  height: 24px;
+  width: 50%;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.ui-skeleton-circle {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ui-skeleton-pill {
+  height: 26px;
+  width: 72px;
+  border-radius: 9999px;
+}
+
+.ui-skeleton-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ui-skeleton-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #e2e8f0;
+}
+
+.ui-skeleton-table-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Page Loading Container */
+.ui-skeleton-page {
+  animation: fadeIn 200ms ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0.7;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   ENHANCED HOVER & MICRO-INTERACTIONS
+   ========================================================= */
+
+/* Button Hover Animations */
+.cycle-submit-btn,
+.report-btn--primary {
+  transition: transform 140ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 140ms cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 140ms ease;
+  will-change: transform;
+}
+
+.cycle-submit-btn:hover:not(:disabled),
+.report-btn--primary:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(24, 115, 90, 0.28);
+}
+
+.cycle-submit-btn:active:not(:disabled),
+.report-btn--primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.985);
+  box-shadow: 0 2px 6px rgba(24, 115, 90, 0.2);
+}
+
+.report-btn {
+  transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.report-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.report-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.member-rfid-save {
+  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.member-rfid-save:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.member-rfid-save:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.member-text-button {
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.member-text-button:hover:not(:disabled) {
+  opacity: 0.82;
+  transform: scale(1.05);
+}
+
+.member-secondary-link {
+  transition: transform 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.member-secondary-link:hover {
+  transform: translateX(2px);
+  border-color: #18735a;
+  color: #18735a;
+}
+
+/* Nav Item Hover Slide */
+.dashboard-nav-link {
+  transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 160ms ease,
+              color 160ms ease;
+}
+
+.dashboard-nav-link:hover {
+  transform: translateX(3px);
+}
+
+.dashboard-nav-link.is-active {
+  transform: none;
+}
+
+/* Stat Card Hover */
+.ui-stat-card {
+  transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 160ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 160ms ease;
+}
+
+.ui-stat-card:hover {
+  transform: translateY(-2.5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  border-color: #cbd5e1;
+}
+
+/* Pill Button Hover */
+.ui-pill-btn {
+  transition: transform 130ms ease, background-color 130ms ease, border-color 130ms ease, color 130ms ease;
+}
+
+.ui-pill-btn:hover:not(.is-active) {
+  transform: translateY(-1px);
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.ui-pill-btn:active {
+  transform: scale(0.97);
+}
+
+/* Duty Day Card Hover */
+.ui-duty-day-card {
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.ui-duty-day-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+/* Table Row Hover Highlight */
+.member-table tbody tr,
+.manual-records tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.member-table tbody tr:hover,
+.manual-records tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Avatar Hover Micro-bounce */
+.ui-avatar {
+  transition: transform 140ms ease;
+}
+
+.ui-avatar:hover {
+  transform: scale(1.08);
+}
+
+/* Chips & Badges Hover */
+.ui-rfid-chip {
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+
+.ui-rfid-chip:hover {
+  transform: scale(1.02);
+  border-color: #10b981;
+}
+
+.ui-status-badge {
+  transition: transform 120ms ease;
+}
+
+.ui-status-badge:hover {
+  transform: scale(1.03);
+}
+
+/* Search Clear Button */
+.ui-search-clear {
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.ui-search-clear:hover {
+  transform: scale(1.1);
+  background-color: #cbd5e1;
+}
