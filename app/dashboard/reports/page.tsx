@@ -185,6 +185,30 @@ export default async function ReportsPage({ searchParams }: PageProps) {
         </p>
       )}
 
+      {/* Screen Metric Summary */}
+      <div className="ui-stats-grid no-print" style={{ marginBottom: "24px" }}>
+        <div className="ui-stat-card is-mint">
+          <span className="ui-stat-label">Total Anggota</span>
+          <div className="ui-stat-value">{numberFormat.format(report.rows.length)}</div>
+          <span className="ui-stat-sub">Sesuai filter aktif</span>
+        </div>
+        <div className="ui-stat-card is-sky">
+          <span className="ui-stat-label">Sesi Absensi</span>
+          <div className="ui-stat-value">{numberFormat.format(report.sessions)}</div>
+          <span className="ui-stat-sub">Status OPEN / CLOSED</span>
+        </div>
+        <div className="ui-stat-card is-indigo">
+          <span className="ui-stat-label">Rata-Rata Kehadiran</span>
+          <div className="ui-stat-value">{report.averageRate}%</div>
+          <div className="ui-recap-progress-bar" style={{ marginTop: 8 }}>
+            <div
+              className="ui-recap-progress-fill is-good"
+              style={{ width: `${Math.min(100, Math.max(0, report.averageRate))}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
       <section className="report-sheet" aria-labelledby="report-title">
         <header className="report-kop">
           <p className="report-org">OSIS MPK SMKN 11 Bandung</p>

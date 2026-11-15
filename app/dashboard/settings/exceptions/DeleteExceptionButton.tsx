@@ -42,6 +42,7 @@ export default function DeleteExceptionButton({ id, label }: Props) {
       <button
         type="button"
         className="member-text-button"
+        style={{ color: "#dc2626", fontWeight: 600 }}
         onClick={handleDelete}
         disabled={loading}
       >

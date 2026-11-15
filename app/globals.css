@@ -6350,3 +6350,159 @@ body {
   }
 }
 
+
+
+/* === Dashboard Home dh-* Polish & Component Refinements === */
+.dh-metric {
+  position: relative;
+  overflow: hidden;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.dh-metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.dh-metric::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #cbd5e1;
+}
+
+.dh-metric.is-mint::before {
+  background: #10b981;
+}
+
+.dh-metric.is-lav::before {
+  background: #6366f1;
+}
+
+.dh-metric.is-pink::before {
+  background: #f43f5e;
+}
+
+.dh-metric.is-cream::before {
+  background: #f59e0b;
+}
+
+.dh-duty {
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.dh-duty:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.dh-duty.is-live {
+  border-left: 4px solid #10b981;
+}
+
+.dh-cal-day.is-today {
+  position: relative;
+  font-weight: 700;
+  color: #047857;
+}
+
+.dh-cal-day.is-today::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.dh-task:hover {
+  background: rgba(24, 115, 90, 0.04);
+}
+
+/* Device monitor enhancements */
+.device-row-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.device-avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  color: #0369a1;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.device-code-label {
+  display: block;
+  font-size: 13.5px;
+  color: #0f172a;
+}
+
+.device-key-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.device-key-panel-icon {
+  font-size: 18px;
+}
+
+.device-key-warning-callout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 12.5px;
+  margin-bottom: 10px;
+}
+
+.device-key-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.device-key-copy-btn {
+  background: #18735a;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.device-key-copy-btn:hover {
+  background: #125744;
+}
+
+/* Print utility */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

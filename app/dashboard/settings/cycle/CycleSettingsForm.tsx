@@ -106,66 +106,62 @@ export default function CycleSettingsForm({ initialStatus }: Props) {
 
         {status.configured ? (
           <>
-          <div className="cycle-status-grid">
-            <div className="cycle-status-item">
-              <span className="cycle-label">Tanggal Mulai Siklus</span>
-              <span className="cycle-value">{status.cycle_start_date}</span>
-            </div>
-            <div className="cycle-status-item">
-              <span className="cycle-label">Waktu Server (WIB)</span>
-              <span className="cycle-value">
-                {status.current_wib.dateStr} {status.current_wib.timeStr} WIB
-              </span>
-            </div>
-            <div className="cycle-status-item">
-              <span className="cycle-label">Hari Ini</span>
-              <span className="cycle-value">
-                {DAY_LABELS[status.current_wib.dayOfWeek] ??
-                  status.current_wib.dayOfWeek}
-              </span>
-            </div>
-            <div className="cycle-status-item">
-              <span className="cycle-label">Minggu Siklus Aktif</span>
-              <span className="cycle-value cycle-badge">
+          <div className="ui-stats-grid" style={{ marginBottom: "20px" }}>
+            <div className="ui-stat-card is-mint">
+              <span className="ui-stat-label">Minggu Siklus Aktif</span>
+              <div className="ui-stat-value" style={{ fontSize: "20px" }}>
                 {status.cycle_week === "WEEK_1"
                   ? "Minggu 1"
                   : status.cycle_week === "WEEK_2"
                     ? "Minggu 2"
                     : "Belum dimulai"}
+              </div>
+              <span className="ui-stat-sub">Rotasi 14 hari</span>
+            </div>
+
+            <div className="ui-stat-card is-sky">
+              <span className="ui-stat-label">Tanggal Mulai Siklus</span>
+              <div className="ui-stat-value" style={{ fontSize: "18px" }}>
+                {status.cycle_start_date}
+              </div>
+              <span className="ui-stat-sub">Titik awal (W1H1)</span>
+            </div>
+
+            <div className="ui-stat-card is-indigo">
+              <span className="ui-stat-label">Hari Ini (WIB)</span>
+              <div className="ui-stat-value" style={{ fontSize: "18px" }}>
+                {DAY_LABELS[status.current_wib.dayOfWeek] ?? status.current_wib.dayOfWeek}
+              </div>
+              <span className="ui-stat-sub">
+                {status.current_wib.dateStr} · {status.current_wib.timeStr} WIB
               </span>
             </div>
-            <div className="cycle-status-item">
-              <span className="cycle-label">Hari ke- (dalam siklus)</span>
-              <span className="cycle-value">
-                {typeof status.cycle_day === "number"
-                  ? status.cycle_day + 1
-                  : "-"}
-              </span>
-            </div>
-            <div className="cycle-status-item">
-              <span className="cycle-label">Total Hari Berjalan</span>
-              <span className="cycle-value">
-                {typeof status.diff_days === "number" ? status.diff_days : "-"}{" "}
-                hari
+
+            <div className="ui-stat-card is-amber">
+              <span className="ui-stat-label">Hari Ke- (Dalam Siklus)</span>
+              <div className="ui-stat-value" style={{ fontSize: "20px" }}>
+                {typeof status.cycle_day === "number" ? status.cycle_day + 1 : "-"}
+                <small style={{ fontSize: "14px", fontWeight: "normal", color: "var(--text-secondary)" }}> / 14</small>
+              </div>
+              <span className="ui-stat-sub">
+                Total {typeof status.diff_days === "number" ? status.diff_days : "-"} hari berjalan
               </span>
             </div>
           </div>
+
           {typeof status.starts_in_days === "number" && (
-            <p className="cycle-form-description" role="status">
-              Siklus mulai dalam {status.starts_in_days} hari. Perhitungan
+            <p className="cycle-form-description" role="status" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 14px", borderRadius: "8px", color: "#166534" }}>
+              ℹ️ Siklus mulai dalam {status.starts_in_days} hari. Perhitungan
               minggu aktif berlaku mulai {status.cycle_start_date} WIB.
             </p>
           )}
           </>
         ) : (
-          <div className="cycle-not-configured">
-            <span className="cycle-warning-icon">⚠️</span>
-            <p>
-              <strong>Siklus belum dikonfigurasi.</strong>
-            </p>
-            <p>
-              Sistem absensi otomatis tidak dapat berjalan tanpa tanggal mulai
-              siklus. Silakan atur tanggal di bawah.
+          <div className="ui-empty-card" style={{ borderColor: "#fde68a", background: "#fffbeb" }}>
+            <div className="ui-empty-icon" aria-hidden="true">⚠️</div>
+            <p className="ui-empty-title" style={{ color: "#92400e" }}>Siklus Belum Dikonfigurasi</p>
+            <p className="ui-empty-desc" style={{ color: "#b45309" }}>
+              Sistem absensi otomatis tidak dapat berjalan tanpa tanggal mulai siklus. Silakan atur tanggal mulai siklus di bawah.
             </p>
           </div>
         )}

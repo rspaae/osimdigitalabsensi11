@@ -80,6 +80,11 @@ export default function CorrectionForm({
 
   return (
     <form onSubmit={handleSubmit} className="cycle-form">
+      <div style={{ background: "#fef3c7", border: "1px solid #fde68a", padding: "10px 14px", borderRadius: "8px", color: "#92400e", marginBottom: "16px", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
+        <span aria-hidden="true">🛡️</span>
+        <span>Setiap koreksi status akan tercatat secara permanen di Audit Log sistem untuk kepatuhan data.</span>
+      </div>
+
       {message && (
         <div
           className={`cycle-message cycle-message--${message.type}`}
@@ -119,6 +124,7 @@ export default function CorrectionForm({
         <textarea
           id="correction-reason"
           className="cycle-field-input correction-textarea"
+          rows={3}
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           disabled={loading}

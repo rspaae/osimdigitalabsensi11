@@ -102,6 +102,12 @@ const DAY_INDEX_MAP: Record<number, string> = {
   6: "SATURDAY",
 };
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const letters = parts.slice(0, 2).map((p) => p[0] ?? "");
+  return letters.join("").toUpperCase() || "?";
+}
+
 export default function SubstitutionManager({
   cycleStartDate,
   activities,
@@ -488,35 +494,92 @@ export default function SubstitutionManager({
           </div>
         </div>
 
-        {/* Filter List */}
-        <div className="member-form-grid" style={{ marginBottom: 18, alignItems: "center" }}>
-          <div>
+        {/* Metric Cards Row */}
+        <div className="ui-stats-grid" style={{ marginBottom: "20px" }}>
+          <div className="ui-stat-card is-mint">
+            <span className="ui-stat-label">Total Pengajuan</span>
+            <div className="ui-stat-value">{substitutions.length}</div>
+            <span className="ui-stat-sub">Semua rekaman</span>
+          </div>
+          <div className="ui-stat-card is-sky">
+            <span className="ui-stat-label">Disetujui / Aktif</span>
+            <div className="ui-stat-value">
+              {substitutions.filter((s) => s.status === "APPROVED").length}
+            </div>
+            <span className="ui-stat-sub">Berlaku untuk RFID</span>
+          </div>
+          <div className="ui-stat-card is-rose">
+            <span className="ui-stat-label">Dibatalkan</span>
+            <div className="ui-stat-value">
+              {substitutions.filter((s) => s.status === "CANCELLED").length}
+            </div>
+            <span className="ui-stat-sub">Tidak berlaku</span>
+          </div>
+        </div>
+
+        {/* Filter List & Search */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
+          <div className="ui-search-input-wrap" style={{ flex: "1 1 280px", maxWidth: "420px" }}>
+            <span className="ui-search-icon" aria-hidden="true">🔍</span>
             <input
               type="text"
-              placeholder="Cari nama siswa atau alasan..."
-              className="cycle-field-input"
+              placeholder="Cari siswa atau alasan..."
+              className="ui-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                className="ui-search-clear"
+                onClick={() => setSearchQuery("")}
+                aria-label="Bersihkan pencarian"
+              >
+                ✕
+              </button>
+            )}
           </div>
-          <div>
-            <select
-              className="cycle-field-input"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+
+          <div className="ui-filter-pills" role="tablist" aria-label="Filter status substitusi">
+            <button
+              type="button"
+              className={`ui-pill-btn ${statusFilter === "ALL" ? "is-active" : ""}`}
+              onClick={() => setStatusFilter("ALL")}
             >
-              <option value="ALL">Semua Status ({substitutions.length})</option>
-              <option value="APPROVED">Aktif / Disetujui (APPROVED)</option>
-              <option value="CANCELLED">Dibatalkan (CANCELLED)</option>
-            </select>
+              Semua
+              <span className="ui-pill-badge">{substitutions.length}</span>
+            </button>
+            <button
+              type="button"
+              className={`ui-pill-btn ${statusFilter === "APPROVED" ? "is-active" : ""}`}
+              onClick={() => setStatusFilter("APPROVED")}
+            >
+              Disetujui
+              <span className="ui-pill-badge">
+                {substitutions.filter((s) => s.status === "APPROVED").length}
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`ui-pill-btn ${statusFilter === "CANCELLED" ? "is-active" : ""}`}
+              onClick={() => setStatusFilter("CANCELLED")}
+            >
+              Dibatalkan
+              <span className="ui-pill-badge">
+                {substitutions.filter((s) => s.status === "CANCELLED").length}
+              </span>
+            </button>
           </div>
         </div>
 
         {filteredSubstitutions.length === 0 ? (
-          <div className="member-empty-state" style={{ padding: "32px 16px" }}>
-            <p style={{ margin: 0, fontWeight: 600 }}>Belum ada data tukar piket yang dicatat.</p>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-secondary)" }}>
-              Gunakan formulir di atas untuk mengajukan penggantian piket jika ada siswa yang berhalangan hadir.
+          <div className="ui-empty-card" style={{ padding: "40px 16px" }}>
+            <div className="ui-empty-icon" aria-hidden="true">🔄</div>
+            <p className="ui-empty-title">Tidak ada data tukar piket</p>
+            <p className="ui-empty-desc">
+              {searchQuery || statusFilter !== "ALL"
+                ? "Tidak ada data yang cocok dengan kriteria filter."
+                : "Gunakan formulir di atas untuk mengajukan pergantian piket jika ada siswa yang berhalangan."}
             </p>
           </div>
         ) : (
@@ -527,7 +590,7 @@ export default function SubstitutionManager({
                   <th style={{ width: 40 }}>No</th>
                   <th>Tanggal Piket</th>
                   <th>Kegiatan</th>
-                  <th>Siswa Asli (Digantikan)</th>
+                  <th>Siswa Digantikan</th>
                   <th>Siswa Pengganti</th>
                   <th>Alasan</th>
                   <th>Status</th>
@@ -545,7 +608,7 @@ export default function SubstitutionManager({
                         <strong>{sub.duty_date}</strong>
                       </td>
                       <td>
-                        <span style={{ fontSize: 12, fontWeight: 600 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>
                           {sub.duty_schedule?.activity?.name ?? "Piket"}
                         </span>
                         <small style={{ display: "block", color: "var(--text-muted)" }}>
@@ -553,31 +616,46 @@ export default function SubstitutionManager({
                         </small>
                       </td>
                       <td>
-                        <span style={{ color: "#b91c1c", fontWeight: 600 }}>
-                          ✕ {sub.original_member.full_name}
-                        </span>
-                        {sub.original_member.class_grade && (
-                          <small style={{ display: "block", color: "var(--text-muted)" }}>
-                            {sub.original_member.class_grade}
-                          </small>
-                        )}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span className="ui-avatar" style={{ width: 28, height: 28, fontSize: 11, background: "linear-gradient(135deg, #fee2e2, #fca5a5)", color: "#991b1b" }}>
+                            {initials(sub.original_member.full_name)}
+                          </span>
+                          <div>
+                            <span style={{ color: "#b91c1c", fontWeight: 600 }}>
+                              ✕ {sub.original_member.full_name}
+                            </span>
+                            {sub.original_member.class_grade && (
+                              <small style={{ display: "block", color: "var(--text-muted)" }}>
+                                {sub.original_member.class_grade}
+                              </small>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td>
-                        <span style={{ color: "#059669", fontWeight: 700 }}>
-                          ✓ {sub.substitute_member.full_name}
-                        </span>
-                        {sub.substitute_member.class_grade && (
-                          <small style={{ display: "block", color: "var(--text-muted)" }}>
-                            {sub.substitute_member.class_grade}
-                          </small>
-                        )}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span className="ui-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
+                            {initials(sub.substitute_member.full_name)}
+                          </span>
+                          <div>
+                            <span style={{ color: "#059669", fontWeight: 700 }}>
+                              ✓ {sub.substitute_member.full_name}
+                            </span>
+                            {sub.substitute_member.class_grade && (
+                              <small style={{ display: "block", color: "var(--text-muted)" }}>
+                                {sub.substitute_member.class_grade}
+                              </small>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <span style={{ fontSize: 13 }}>{sub.reason}</span>
                       </td>
                       <td>
-                        <span className={`badge-status ${isApproved ? "badge-hadir" : "badge-belum"}`}>
-                          {isApproved ? "DISETUJUI" : "DIBATALKAN"}
+                        <span className={`ui-status-badge ${isApproved ? "is-hadir" : "is-belum"}`}>
+                          <span className="ui-status-dot" aria-hidden="true" />
+                          {isApproved ? "Disetujui" : "Dibatalkan"}
                         </span>
                       </td>
                       <td>
@@ -590,7 +668,7 @@ export default function SubstitutionManager({
                           <button
                             type="button"
                             className="member-text-button"
-                            style={{ color: "#dc2626" }}
+                            style={{ color: "#dc2626", fontWeight: 600 }}
                             onClick={() => handleCancel(sub.id, sub.substitute_member.full_name)}
                             disabled={busy}
                           >

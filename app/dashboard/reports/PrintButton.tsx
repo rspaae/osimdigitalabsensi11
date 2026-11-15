@@ -6,8 +6,9 @@
  */
 export default function PrintButton() {
   return (
-    <button type="button" className="report-btn" onClick={() => window.print()}>
-      Cetak / Simpan PDF
+    <button type="button" className="report-btn" onClick={() => window.print()} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+      <span aria-hidden="true">🖨️</span>
+      <span>Cetak / Simpan PDF</span>
     </button>
   );
 }

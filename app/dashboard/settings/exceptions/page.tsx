@@ -70,6 +70,20 @@ export default async function ScheduleExceptionsPage() {
       </header>
 
       <div className="settings-page-body">
+        {/* Metric Cards Row */}
+        <div className="ui-stats-grid" style={{ marginBottom: "24px" }}>
+          <div className="ui-stat-card is-amber">
+            <span className="ui-stat-label">Hari Libur Terjadwal</span>
+            <div className="ui-stat-value">{exceptions.length}</div>
+            <span className="ui-stat-sub">Rentang {from} s.d. {to}</span>
+          </div>
+          <div className="ui-stat-card is-mint">
+            <span className="ui-stat-label">Status Proteksi RFID</span>
+            <div className="ui-stat-value" style={{ fontSize: "20px" }}>Aktif</div>
+            <span className="ui-stat-sub">Scan otomatis ditolak saat libur</span>
+          </div>
+        </div>
+
         <section className="member-form-card" aria-labelledby="exception-form-title">
           <h2 className="cycle-section-title" id="exception-form-title">Tambah pengecualian</h2>
           <p className="cycle-form-description">
@@ -93,7 +107,11 @@ export default async function ScheduleExceptionsPage() {
           </div>
 
           {exceptions.length === 0 ? (
-            <p className="member-empty-state">Belum ada tanggal yang ditandai libur.</p>
+            <div className="ui-empty-card" style={{ padding: "40px 16px" }}>
+              <div className="ui-empty-icon" aria-hidden="true">📅</div>
+              <p className="ui-empty-title">Tidak ada jadwal libur</p>
+              <p className="ui-empty-desc">Belum ada tanggal yang ditandai libur pada rentang waktu ini.</p>
+            </div>
           ) : (
             <div className="member-table-wrap">
               <table className="member-table table-stack">

@@ -35,6 +35,25 @@ export default async function DevicesPage() {
         <p className="settings-page-desc">Daftarkan ESP32, salin kredensialnya ke firmware, lalu pantau heartbeat untuk memastikan perangkat mencapai server.</p>
       </header>
       <div className="settings-page-body">
+        {/* Metric Cards Row */}
+        <div className="ui-stats-grid" style={{ marginBottom: "24px" }}>
+          <div className="ui-stat-card is-mint">
+            <span className="ui-stat-label">Total Perangkat</span>
+            <div className="ui-stat-value">{result.devices.length}</div>
+            <span className="ui-stat-sub">Terdaftar di database</span>
+          </div>
+          <div className="ui-stat-card is-sky">
+            <span className="ui-stat-label">Perangkat Aktif</span>
+            <div className="ui-stat-value">{result.devices.filter(d => d.is_active).length}</div>
+            <span className="ui-stat-sub">Status aktif</span>
+          </div>
+          <div className="ui-stat-card is-amber">
+            <span className="ui-stat-label">Nonaktif</span>
+            <div className="ui-stat-value">{result.devices.filter(d => !d.is_active).length}</div>
+            <span className="ui-stat-sub">Perlu aktivasi</span>
+          </div>
+        </div>
+
         <DeviceRegistrationForm />
         <section className="member-list-card device-test-guide" aria-labelledby="device-test-guide-title">
           <h2 id="device-test-guide-title" className="cycle-section-title">Cara uji koneksi lokal</h2>

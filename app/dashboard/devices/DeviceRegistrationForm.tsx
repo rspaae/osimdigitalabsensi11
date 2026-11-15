@@ -87,13 +87,24 @@ export default function DeviceRegistrationForm() {
           <button type="submit" className="cycle-submit-btn" disabled={saving}>{saving ? "Mendaftarkan…" : "Buat perangkat & API key"}</button>
         </div>
       </form>
+
       {created && (
         <div className="device-key-panel" role="alert">
-          <strong>{created.device.device_code} — API key baru</strong>
+          <div className="device-key-panel-header">
+            <span className="device-key-panel-icon" aria-hidden="true">🔑</span>
+            <strong className="device-key-panel-title">{created.device.device_code} — API key baru</strong>
+          </div>
+          <div className="device-key-warning-callout" role="note">
+            <span className="device-key-warning-icon" aria-hidden="true">⚠️</span>
+            <span>{created.warning}</span>
+          </div>
           <code className="device-key-value">{created.raw_api_key}</code>
-          <p>{created.warning}</p>
-          <button type="button" className="member-rfid-save" onClick={copyKey}>Salin API key</button>
-          <p className="cycle-field-hint">Jangan kirim key ke chat atau commit ke Git. Masukkan ke secrets.h yang diabaikan Git.</p>
+          <div className="device-key-actions">
+            <button type="button" className="member-rfid-save device-key-copy-btn" onClick={copyKey}>
+              Salin API key
+            </button>
+            <p className="cycle-field-hint">Jangan kirim key ke chat atau commit ke Git. Masukkan ke secrets.h yang diabaikan Git.</p>
+          </div>
         </div>
       )}
     </section>

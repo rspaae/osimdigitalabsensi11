@@ -207,17 +207,31 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
       </header>
 
       <div className="settings-page-body manual-body">
+        {/* Metric Cards Row */}
+        <div className="ui-stats-grid" style={{ marginBottom: "20px" }}>
+          <div className="ui-stat-card is-mint">
+            <span className="ui-stat-label">Sesi Hari Ini</span>
+            <div className="ui-stat-value">{sessions.length}</div>
+            <span className="ui-stat-sub">Sesi aktif/terbuka</span>
+          </div>
+          <div className="ui-stat-card is-sky">
+            <span className="ui-stat-label">Total Rekaman</span>
+            <div className="ui-stat-value">{totalRecords}</div>
+            <span className="ui-stat-sub">Semua metode scan &amp; manual</span>
+          </div>
+          <div className="ui-stat-card is-amber">
+            <span className="ui-stat-label">Rekaman Manual</span>
+            <div className="ui-stat-value">{manualRecords}</div>
+            <span className="ui-stat-sub">Input tanpa kartu</span>
+          </div>
+        </div>
+
         <form className="manual-toolbar" method="get" action="/dashboard/attendance/manual">
           <label className="report-field">
             <span>Tanggal sesi</span>
             <input type="date" name="date" defaultValue={selectedDate} />
           </label>
           <button type="submit" className="report-btn report-btn--primary">Tampilkan</button>
-          <div className="manual-summary">
-            <span><strong>{sessions.length}</strong> sesi</span>
-            <span><strong>{totalRecords}</strong> rekaman</span>
-            <span><strong>{manualRecords}</strong> manual</span>
-          </div>
         </form>
 
         <p className="manual-date-note">{dateFormatter.format(dateUtc)} · WIB</p>
@@ -249,9 +263,10 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
         )}
 
         {sessionItems.length === 0 ? (
-          <div className="manual-empty">
-            <strong>Belum ada sesi pada tanggal ini</strong>
-            <span>
+          <div className="ui-empty-card">
+            <span className="ui-empty-card__icon" aria-hidden="true">📋</span>
+            <strong className="ui-empty-card__title">Belum ada sesi pada tanggal ini</strong>
+            <span className="ui-empty-card__desc">
               Sesi biasanya dibuat otomatis saat scan RFID pertama. Untuk input manual tanpa
               scan, buat sesi terlebih dahulu di atas.
             </span>
@@ -294,10 +309,11 @@ export default async function ManualAttendancePage({ searchParams }: PageProps) 
                             <td data-label="Kelas">{record.classGrade ?? "—"}</td>
                             <td data-label="Status">
                               <span
-                                className={`dh-status is-${
+                                className={`ui-status-badge is-${
                                   ATTENDANCE_STATUS_STYLE[record.status] ?? "belum"
                                 }`}
                               >
+                                <span className="ui-status-dot" aria-hidden="true" />
                                 {ATTENDANCE_STATUS_LABEL[record.status] ?? record.status}
                               </span>
                             </td>
